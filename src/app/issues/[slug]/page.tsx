@@ -204,7 +204,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
         {quote && (
           <div className="border-l-4 border-gray-300 pl-5 my-6">
             <p className="text-base font-sans italic text-gray-600 leading-relaxed mb-2">
-              "{quote.quote_text}"
+              &quot;{quote.quote_text}&quot;
             </p>
             <p className="text-xs font-sans font-bold text-gray-500">
               — {quote.quote_author}
@@ -312,7 +312,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
 
       {mapData && (
         <>
-          <SectionLabel id="map">Maps Don't Lie</SectionLabel>
+          <SectionLabel id="map">Maps Don&apos;t Lie</SectionLabel>
           <div className="grid grid-cols-2 gap-8 mb-8">
             <div>
               {(mapData as MapDontLie).image_url ? (
@@ -374,13 +374,13 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
 
       {(satelliteGame || crosswordGame || geoguesserGame) && (
         <>
-          <SectionLabel id="games">This Week's Games</SectionLabel>
+          <SectionLabel id="games">This Week&apos;s Games</SectionLabel>
 
           {satelliteGame && (
             <div className="mb-10">
               <h3 className="text-base font-bold mb-1">Satellite Spot</h3>
               <p className="text-xs font-sans text-gray-500 mb-4">Where on Earth is this?</p>
-              <SatelliteSpot data={satelliteGame.data as Parameters<typeof SatelliteSpot>[0]["data"]} />
+              <SatelliteSpot data={satelliteGame.data as unknown as Parameters<typeof SatelliteSpot>[0]["data"]} />
             </div>
           )}
 
@@ -388,7 +388,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
             <div className="mb-10">
               <h3 className="text-base font-bold mb-1">GeoGuesser</h3>
               <p className="text-xs font-sans text-gray-500 mb-4">Drop a pin to guess this location.</p>
-              <GeoGuesser data={geoguesserGame.data as Parameters<typeof GeoGuesser>[0]["data"]} />
+              <GeoGuesser data={geoguesserGame.data as unknown as Parameters<typeof GeoGuesser>[0]["data"]} />
             </div>
           )}
 
@@ -398,7 +398,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
                 GIS Crossword — {(crosswordGame.data as {title?: string}).title || "This Week"}
               </h3>
               <p className="text-xs font-sans text-gray-500 mb-4">Fill in the grid using GIS terminology.</p>
-              <GISCrossword data={crosswordGame.data as Parameters<typeof GISCrossword>[0]["data"]} />
+              <GISCrossword data={crosswordGame.data as unknown as Parameters<typeof GISCrossword>[0]["data"]} />
             </div>
           )}
 
