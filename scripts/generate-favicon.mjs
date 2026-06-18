@@ -1,0 +1,17 @@
+import sharp from 'sharp'
+import { readFileSync, writeFileSync } from 'fs'
+
+const svg = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="6" fill="#1a1a1a"/>
+  <polyline points="4,26 9,16 14,20 19,8 24,13 28,5" stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="4" cy="26" r="1.5" fill="white"/>
+  <circle cx="9" cy="16" r="1.5" fill="white"/>
+  <circle cx="14" cy="20" r="1.5" fill="white"/>
+  <circle cx="19" cy="8" r="1.5" fill="white"/>
+  <circle cx="24" cy="13" r="1.5" fill="white"/>
+  <circle cx="28" cy="5" r="3" fill="#1a6b3c"/>
+</svg>`
+
+const pngBuffer = await sharp(Buffer.from(svg)).resize(32, 32).png().toBuffer()
+writeFileSync('public/favicon.ico', pngBuffer)
+console.log('favicon.ico generated')
