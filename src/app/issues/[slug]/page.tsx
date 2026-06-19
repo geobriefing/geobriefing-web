@@ -352,21 +352,17 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
       {comics.length > 0 && (
         <>
           <SectionLabel id="comics">Comic Strips</SectionLabel>
-          <div className="flex flex-col gap-10 mb-4">
-            {comics.map((comic) => (
-              <div key={comic.id} className="max-w-2xl mx-auto w-full">
-                <p className="text-xs font-sans text-gray-400 uppercase tracking-widest mb-1 text-center">
-                  {comic.comic_series?.title}
-                </p>
-                <p className="text-sm font-bold mb-3 text-center">{comic.title}</p>
-                {comic.image_url ? (
-                  <img src={comic.image_url} alt={comic.title}
-                    className="w-full border border-gray-200" />
-                ) : (
-                  <div className="w-full h-40 bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center">
-                    <span className="text-xs font-sans text-gray-300">Image coming soon</span>
-                  </div>
-                )}
+            <div className="flex flex-col gap-10 mb-4">
+              {comics.map((comic) => (
+                <div key={comic.id} className="max-w-2xl mx-auto w-full">
+                  {comic.image_url ? (
+                    <img src={comic.image_url} alt={comic.title}
+                      className="w-full border border-gray-200" />
+                  ) : (
+                    <div className="w-full h-40 bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center">
+                      <span className="text-xs font-sans text-gray-300">Image coming soon</span>
+                    </div>
+                  )}
               </div>
             ))}
           </div>
