@@ -1,4 +1,6 @@
-﻿import { supabase } from "@/lib/supabase"
+﻿export const revalidate = 0
+
+import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import Logo from "@/components/Logo"
 
@@ -89,14 +91,14 @@ const HomePage = async () => {
         <div className="grid grid-cols-3 border-b-2 border-[#1a1a1a] mb-0">
           <div className="col-span-2 border-r border-gray-200 pr-8 py-8">
             <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">
-              This week&apos;s briefing
+              This week's briefing
             </p>
             <h1 className="text-4xl font-bold leading-tight mb-5">{issue.headline}</h1>
 
             {quoteData && (
               <div className="border-l-4 border-gray-200 pl-4 mb-5">
                 <p className="text-sm font-sans italic text-gray-500 leading-relaxed mb-1">
-                  &quot;{quoteData.quote_text}&quot;
+                  "{quoteData.quote_text}"
                 </p>
                 <p className="text-xs font-sans text-gray-400">
                   — {quoteData.quote_author}{quoteData.quote_role ? `, ${quoteData.quote_role}` : ""}
@@ -240,7 +242,7 @@ const HomePage = async () => {
 
         {mapData && (
           <div className="border-r border-gray-200 px-6 py-6">
-            <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">Maps Don&apos;t Lie</p>
+            <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">Maps Don't Lie</p>
             {(mapData as {image_url: string | null}).image_url ? (
               <img src={(mapData as {image_url: string}).image_url} alt={(mapData as {title: string}).title}
                 className="w-full h-28 object-cover border border-gray-200 mb-2" />
