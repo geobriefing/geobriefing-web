@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
-import Logo from "@/components/Logo"
+import Header from "@/components/Header"
 
 interface Job {
   id: string
@@ -21,8 +21,8 @@ const JobCard = ({ job }: { job: Job }) => (
     {job.is_featured && (
       <span className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-2 block">Featured</span>
     )}
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex-1">
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+      <div className="flex-1 min-w-0">
         <h3 className="text-base font-bold leading-snug mb-1">{job.title}</h3>
         <div className="flex items-center gap-3 mb-2 flex-wrap">
           <span className="text-sm font-sans text-gray-600">{job.company}</span>
@@ -44,7 +44,7 @@ const JobCard = ({ job }: { job: Job }) => (
         </div>
       </div>
       <a href={job.apply_url} target="_blank" rel="noopener noreferrer"
-        className="flex-shrink-0 bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase px-4 py-2 hover:bg-[#1a6b3c] transition-colors">
+        className="flex-shrink-0 inline-block text-center bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase px-4 py-2 hover:bg-[#1a6b3c] transition-colors">
         Apply
       </a>
     </div>
@@ -67,25 +67,12 @@ const JobsPage = async () => {
     .order("posted_at", { ascending: false })
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8 font-serif">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
 
-      <div className="border-t-4 border-b border-[#1a1a1a] mb-1 pt-4 pb-3">
-        <div className="flex items-center justify-center gap-6 py-3 border-t border-b border-[#1a1a1a]">
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-          <Logo size="lg" />
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-        </div>
-      </div>
-
-      <nav className="flex gap-6 py-2 border-b border-gray-300 mb-8 font-sans text-xs tracking-widest uppercase">
-        <Link href="/" className="text-gray-500 hover:text-[#1a1a1a]">This week</Link>
-        <Link href="/issues" className="text-gray-500 hover:text-[#1a1a1a]">All issues</Link>
-        <Link href="/jobs" className="text-[#1a6b3c] font-bold">Jobs</Link>
-        <Link href="/subscribe" className="text-gray-500 hover:text-[#1a1a1a]">Subscribe</Link>
-      </nav>
+      <Header active="jobs" topLeftLabel="Jobs" />
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">GIS Jobs</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">GIS Jobs</h1>
         <p className="text-sm font-sans text-gray-500 leading-relaxed">
           Curated GIS, geospatial, and remote sensing opportunities updated weekly.
           Pakistan listings and international roles open to global applicants.
@@ -131,7 +118,7 @@ const JobsPage = async () => {
         <p className="text-sm font-sans text-gray-600 mb-4">
           Subscribe to GeoBriefing - job listings every Monday alongside GIS news.
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input type="email" placeholder="your@email.com"
             className="flex-1 border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a6b3c]" />
           <button className="bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase px-4 py-2 hover:bg-[#1a6b3c] transition-colors">
@@ -140,7 +127,7 @@ const JobsPage = async () => {
         </div>
       </div>
 
-      <footer className="border-t-2 border-[#1a1a1a] pt-4 flex justify-between items-center">
+      <footer className="border-t-2 border-[#1a1a1a] pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-center">
         <span className="text-xs font-sans text-gray-400">2026 GeoBriefing</span>
         <Link href="/" className="text-xs font-sans text-[#1a6b3c] hover:underline">Back to latest issue</Link>
       </footer>

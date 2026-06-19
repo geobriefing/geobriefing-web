@@ -1,7 +1,7 @@
 ﻿"use client"
 import { useState } from "react"
 import Link from "next/link"
-import Logo from "@/components/Logo"
+import Header from "@/components/Header"
 
 export default function SubscribePage() {
   const [name, setName] = useState("")
@@ -49,34 +49,12 @@ export default function SubscribePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-8 font-serif">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
 
-      <header className="border-t-4 border-b border-[#1a1a1a] mb-1 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">Subscribe</span>
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">geobriefing.com</span>
-        </div>
-        <div className="flex items-center justify-center gap-6 py-4 border-t border-b border-[#1a1a1a]">
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-          <Link href="/"><Logo size="lg" /></Link>
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-xs font-sans text-gray-500">South Asia · Middle East · Central Asia · Global</span>
-          <span className="text-xs font-sans text-gray-500">Free weekly · GIS intelligence</span>
-        </div>
-      </header>
-
-      <nav className="flex gap-6 py-2 border-b border-gray-300 mb-10 font-sans text-xs tracking-widest uppercase">
-        <Link href="/" className="text-gray-500 hover:text-[#1a1a1a]">This week</Link>
-        <Link href="/issues" className="text-gray-500 hover:text-[#1a1a1a]">All issues</Link>
-        <Link href="/jobs" className="text-gray-500 hover:text-[#1a1a1a]">Jobs</Link>
-        <Link href="/about" className="text-gray-500 hover:text-[#1a1a1a]">About</Link>
-        <Link href="/subscribe" className="text-[#1a6b3c] font-bold">Subscribe</Link>
-      </nav>
+      <Header active="subscribe" topLeftLabel="Subscribe" />
 
       <div className="border-t-2 border-[#1a1a1a] pt-8 mb-10">
-        <h1 className="text-3xl font-bold mb-4">Subscribe to GeoBriefing</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4">Subscribe to GeoBriefing</h1>
         <p className="text-sm font-sans text-gray-600 leading-relaxed mb-2">
           GeoBriefing is a free weekly GIS intelligence publication. Every Monday: curated
           news, original stories, games, comics, maps, events, and jobs — with a focus on
@@ -88,7 +66,7 @@ export default function SubscribePage() {
       </div>
 
       {status === "success" ? (
-        <div className="border border-[#1a6b3c] bg-emerald-50 p-8 text-center mb-10">
+        <div className="border border-[#1a6b3c] bg-emerald-50 p-6 sm:p-8 text-center mb-10">
           <p className="text-lg font-bold mb-2">You are in.</p>
           <p className="text-sm font-sans text-gray-600 mb-4">
             Welcome to GeoBriefing. Check your inbox for a confirmation.
@@ -100,7 +78,7 @@ export default function SubscribePage() {
           </Link>
         </div>
       ) : (
-        <div className="border border-gray-300 p-6 mb-10">
+        <div className="border border-gray-300 p-4 sm:p-6 mb-10">
           <div className="flex flex-col gap-3 mb-4">
             <input
               type="text"
@@ -162,7 +140,7 @@ export default function SubscribePage() {
         </div>
       </div>
 
-      <div className="border-t-2 border-[#1a1a1a] pt-6 flex justify-between items-center">
+      <div className="border-t-2 border-[#1a1a1a] pt-6 flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between sm:items-center">
         <Link href="/" className="text-xs font-sans text-[#1a6b3c] hover:underline">
           Read the latest issue first →
         </Link>

@@ -1,8 +1,7 @@
 ﻿"use client"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import Logo from "@/components/Logo"
+import AdminHeader from "@/components/AdminHeader"
 import { supabaseAdmin as supabase } from "@/lib/supabase"
 
 interface Issue { id: string; issue_number: number; headline: string; editor_note: string | null; status: string }
@@ -82,32 +81,9 @@ export default function ContentAdminPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8 font-serif">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
 
-      <header className="border-t-4 border-b border-[#1a1a1a] mb-1 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">Admin · Content Review</span>
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">geobriefing.com</span>
-        </div>
-        <div className="flex items-center justify-center gap-6 py-4 border-t border-b border-[#1a1a1a]">
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-          <Link href="/"><Logo size="lg" /></Link>
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-xs font-sans text-gray-500">South Asia · Middle East · Central Asia · Global</span>
-          <span className="text-xs font-sans text-gray-500">Free weekly · GIS intelligence</span>
-        </div>
-      </header>
-
-      <nav className="flex gap-6 py-2 border-b border-gray-300 mb-6 font-sans text-xs tracking-widest uppercase">
-        <Link href="/admin/comics" className="text-gray-500 hover:text-[#1a1a1a]">Comics</Link>
-        <Link href="/admin/maps" className="text-gray-500 hover:text-[#1a1a1a]">Maps</Link>
-        <Link href="/admin/content" className="text-[#1a6b3c] font-bold">Content</Link>
-        <Link href="/admin/settings" className="text-gray-500 hover:text-[#1a1a1a]">Settings</Link>
-        <Link href="/" className="text-gray-500 hover:text-[#1a1a1a]">View site</Link>
-        <button onClick={handleLogout} className="text-red-400 hover:text-red-600 font-bold ml-auto">Logout</button>
-      </nav>
+      <AdminHeader active="content" topLeftLabel="Admin · Content Review" onLogout={handleLogout} />
 
       {message && (
         <div className={`mb-4 px-4 py-3 text-sm font-sans border ${
@@ -117,10 +93,10 @@ export default function ContentAdminPage() {
         </div>
       )}
 
-      <div className="flex gap-0 border-b border-gray-200 mb-8">
+      <div className="flex gap-0 border-b border-gray-200 mb-8 overflow-x-auto whitespace-nowrap">
         {(["editorial", "jokes", "facts", "stories"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`text-xs font-sans font-bold tracking-widest uppercase px-4 py-2 border-b-2 transition-colors capitalize ${
+            className={`flex-shrink-0 text-xs font-sans font-bold tracking-widest uppercase px-3 sm:px-4 py-2 border-b-2 transition-colors capitalize ${
               tab === t ? "border-[#1a6b3c] text-[#1a6b3c]" : "border-transparent text-gray-500 hover:text-[#1a1a1a]"
             }`}>
             {t} {t === "editorial" ? `(${issues.length})` : t === "jokes" ? `(${jokes.length})` : t === "facts" ? `(${facts.length})` : `(${stories.length})`}
@@ -149,8 +125,8 @@ export default function ContentAdminPage() {
                 <textarea value={editingIssue.editor_note || ""} onChange={e => setEditingIssue({ ...editingIssue, editor_note: e.target.value })}
                   rows={5} className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a] resize-none leading-relaxed" />
               </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-sans px-2 py-1 rounded ${editingIssue.status === "published" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 sm:items-center sm:justify-between">
+                <span className={`text-xs font-sans px-2 py-1 rounded w-fit ${editingIssue.status === "published" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
                   {editingIssue.status}
                 </span>
                 <button onClick={saveEditorial}
@@ -176,7 +152,7 @@ export default function ContentAdminPage() {
                   onChange={e => setJokes(jokes.map(j => j.id === joke.id ? { ...j, punchline: e.target.value } : j))}
                   className="w-full border border-gray-200 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a]" placeholder="Punchline..." />
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <span className="text-xs font-sans text-gray-400">{joke.topic}</span>
                 <button onClick={() => updateJoke(joke)} className="text-xs font-sans text-[#1a6b3c] font-bold hover:underline">Save</button>
                 <button onClick={() => deleteItem("jokes", joke.id)} className="text-xs font-sans text-red-400 hover:underline">Delete</button>
@@ -193,11 +169,13 @@ export default function ContentAdminPage() {
             <div key={fact.id} className="border-b border-gray-100 py-4">
               <textarea value={fact.fact} onChange={e => setFacts(facts.map(f => f.id === fact.id ? { ...f, fact: e.target.value } : f))}
                 rows={3} className="w-full border border-gray-200 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a] resize-none mb-2" />
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                 <input type="text" value={fact.source} onChange={e => setFacts(facts.map(f => f.id === fact.id ? { ...f, source: e.target.value } : f))}
                   className="flex-1 border border-gray-200 px-2 py-1 text-xs font-sans outline-none" placeholder="Source..." />
-                <button onClick={() => updateFact(fact)} className="text-xs font-sans text-[#1a6b3c] font-bold hover:underline">Save</button>
-                <button onClick={() => deleteItem("fun_facts", fact.id)} className="text-xs font-sans text-red-400 hover:underline">Delete</button>
+                <div className="flex items-center gap-4">
+                  <button onClick={() => updateFact(fact)} className="text-xs font-sans text-[#1a6b3c] font-bold hover:underline">Save</button>
+                  <button onClick={() => deleteItem("fun_facts", fact.id)} className="text-xs font-sans text-red-400 hover:underline">Delete</button>
+                </div>
               </div>
             </div>
           ))}
@@ -209,17 +187,17 @@ export default function ContentAdminPage() {
           {stories.length === 0 && <p className="text-sm font-sans text-gray-400 italic">No stories yet. Run the content generator first.</p>}
           {stories.map(story => (
             <div key={story.id} className="border border-gray-200 p-4 mb-4">
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
                 <input type="text" value={story.title}
                   onChange={e => setStories(stories.map(s => s.id === story.id ? { ...s, title: e.target.value } : s))}
-                  className="flex-1 border border-gray-200 px-3 py-2 text-sm font-sans font-bold outline-none focus:border-[#1a1a1a] mr-3" />
-                <span className={`text-xs font-sans px-2 py-1 rounded whitespace-nowrap ${story.status === "published" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+                  className="flex-1 border border-gray-200 px-3 py-2 text-sm font-sans font-bold outline-none focus:border-[#1a1a1a] sm:mr-3" />
+                <span className={`text-xs font-sans px-2 py-1 rounded whitespace-nowrap w-fit ${story.status === "published" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
                   {story.status}
                 </span>
               </div>
               <textarea value={story.content} onChange={e => setStories(stories.map(s => s.id === story.id ? { ...s, content: e.target.value } : s))}
                 rows={6} className="w-full border border-gray-200 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a] resize-none mb-3 leading-relaxed" />
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <span className="text-xs font-sans text-gray-400">{story.story_type}</span>
                 <button onClick={() => updateStory(story)} className="text-xs font-sans text-[#1a6b3c] font-bold hover:underline">Save edits</button>
                 {story.status === "draft" && (

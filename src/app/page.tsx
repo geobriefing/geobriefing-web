@@ -2,7 +2,7 @@
 
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
-import Logo from "@/components/Logo"
+import Header from "@/components/Header"
 
 const HomePage = async () => {
   const { data: issueData } = await supabase
@@ -56,49 +56,29 @@ const HomePage = async () => {
     "Africa": "bg-yellow-100 text-yellow-800",
   }
 
+  const topLeftLabel = issue
+    ? `Issue #${issue.issue_number} · ${issue.published_at
+        ? new Date(issue.published_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+        : ""}`
+    : ""
+
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 font-serif">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
 
-      <header className="border-t-4 border-b border-[#1a1a1a] mb-1 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">
-            {issue ? `Issue #${issue.issue_number}` : ""} · {issue?.published_at
-              ? new Date(issue.published_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-              : ""}
-          </span>
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">geobriefing.com</span>
-        </div>
-        <div className="flex items-center justify-center gap-6 py-4 border-t border-b border-[#1a1a1a]">
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-          <Logo size="lg" />
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-xs font-sans text-gray-500">South Asia · Middle East · Central Asia · Global</span>
-          <span className="text-xs font-sans text-gray-500">Free weekly · GIS intelligence</span>
-        </div>
-      </header>
-
-      <nav className="flex gap-6 py-2 border-b border-gray-300 mb-0 font-sans text-xs tracking-widest uppercase">
-        <Link href="/" className="text-[#1a6b3c] font-bold">This week</Link>
-        <Link href="/issues" className="text-gray-500 hover:text-[#1a1a1a]">All issues</Link>
-        <Link href="/jobs" className="text-gray-500 hover:text-[#1a1a1a]">Jobs</Link>
-        <Link href="/about" className="text-gray-500 hover:text-[#1a1a1a]">About</Link>
-        <Link href="/subscribe" className="text-gray-500 hover:text-[#1a1a1a]">Subscribe</Link>
-      </nav>
+      <Header active="this-week" topLeftLabel={topLeftLabel} />
 
       {issue && (
-        <div className="grid grid-cols-3 border-b-2 border-[#1a1a1a] mb-0">
-          <div className="col-span-2 border-r border-gray-200 pr-8 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 border-b-2 border-[#1a1a1a] mb-0">
+          <div className="md:col-span-2 md:border-r border-gray-200 md:pr-8 py-6 md:py-8">
             <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">
-              This week's briefing
+              This week&apos;s briefing
             </p>
-            <h1 className="text-4xl font-bold leading-tight mb-5">{issue.headline}</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-5">{issue.headline}</h1>
 
             {quoteData && (
               <div className="border-l-4 border-gray-200 pl-4 mb-5">
                 <p className="text-sm font-sans italic text-gray-500 leading-relaxed mb-1">
-                  "{quoteData.quote_text}"
+                  &quot;{quoteData.quote_text}&quot;
                 </p>
                 <p className="text-xs font-sans text-gray-400">
                   — {quoteData.quote_author}{quoteData.quote_role ? `, ${quoteData.quote_role}` : ""}
@@ -118,8 +98,8 @@ const HomePage = async () => {
             </Link>
           </div>
 
-          <div className="pl-6 py-8 flex flex-col gap-0">
-            <p className="text-xs font-sans font-bold text-gray-400 tracking-widest uppercase mb-3">
+          <div className="md:pl-6 py-6 md:py-8 flex flex-col gap-0 border-t md:border-t-0 border-gray-200 mt-2 md:mt-0">
+            <p className="text-xs font-sans font-bold text-gray-400 tracking-widest uppercase mb-3 mt-2 md:mt-0">
               In this issue
             </p>
             {[
@@ -144,15 +124,15 @@ const HomePage = async () => {
         </div>
       )}
 
-      <div className="grid grid-cols-3 border-b border-gray-200 mb-0">
-        <div className="col-span-2 border-r border-gray-200 pr-8 py-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 border-b border-gray-200 mb-0">
+        <div className="md:col-span-2 md:border-r border-gray-200 md:pr-8 py-6">
           <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-4">
             Top stories
           </p>
           <div className="flex flex-col gap-0">
             {stories.map((story, i) => (
               <div key={story.id} className={`py-4 ${i < stories.length - 1 ? "border-b border-gray-100" : ""}`}>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className={`text-xs font-sans font-bold px-2 py-0.5 rounded ${regionColors[story.region] || "bg-gray-100 text-gray-700"}`}>
                     {story.region}
                   </span>
@@ -175,10 +155,10 @@ const HomePage = async () => {
           </div>
         </div>
 
-        <div className="pl-6 py-6 flex flex-col gap-6">
+        <div className="md:pl-6 py-6 flex flex-col gap-6 border-t md:border-t-0 border-gray-200 mt-2 md:mt-0">
           {jokeData && (
             <div>
-              <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">GIS Joke</p>
+              <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3 mt-4 md:mt-0">GIS Joke</p>
               <p className="text-sm font-bold mb-1 leading-snug">{jokeData.setup}</p>
               <p className="text-sm font-sans text-gray-500 italic">{jokeData.punchline}</p>
             </div>
@@ -217,11 +197,11 @@ const HomePage = async () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 border-b border-gray-200 mb-0">
+      <div className="grid grid-cols-1 md:grid-cols-3 border-b border-gray-200 mb-0">
 
         {gisStoryData && (
-          <div className="border-r border-gray-200 pr-6 py-6">
-            <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">GIS Story</p>
+          <div className="md:border-r border-gray-200 md:pr-6 py-6 border-t md:border-t-0">
+            <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3 mt-2 md:mt-0">GIS Story</p>
             <span className={`text-xs font-sans font-bold px-2 py-0.5 rounded mb-2 inline-block ${
               (gisStoryData as {story_type: string}).story_type === "history" ? "bg-amber-100 text-amber-700" :
               (gisStoryData as {story_type: string}).story_type === "wild" ? "bg-red-100 text-red-700" :
@@ -241,9 +221,10 @@ const HomePage = async () => {
         )}
 
         {mapData && (
-          <div className="border-r border-gray-200 px-6 py-6">
-            <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">Maps Don't Lie</p>
+          <div className="md:border-r border-gray-200 md:px-6 py-6 border-t md:border-t-0">
+            <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">Maps Don&apos;t Lie</p>
             {(mapData as {image_url: string | null}).image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={(mapData as {image_url: string}).image_url} alt={(mapData as {title: string}).title}
                 className="w-full h-28 object-cover border border-gray-200 mb-2" />
             ) : (
@@ -265,12 +246,13 @@ const HomePage = async () => {
           </div>
         )}
 
-        <div className="pl-6 py-6">
-          <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">Comics</p>
+        <div className="md:pl-6 py-6 border-t md:border-t-0">
+          <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3 mt-2 md:mt-0">Comics</p>
           <div className="flex flex-col gap-3 mb-3">
             {comics.map((comic: {id: string, title: string, image_url: string | null, comic_series: {title: string} | null}) => (
               <div key={comic.id} className="flex gap-2 items-start">
                 {comic.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={comic.image_url} alt={comic.title}
                     className="w-14 h-10 object-cover border border-gray-200 flex-shrink-0" />
                 ) : (
@@ -314,13 +296,13 @@ const HomePage = async () => {
         <p className="text-xs font-sans font-bold text-gray-400 tracking-widest uppercase mb-3">Past issues</p>
         <div className="flex flex-col gap-0">
           {allIssues.map((i, idx) => (
-            <div key={i.id} className={`flex items-center justify-between py-2.5 ${idx < allIssues.length - 1 ? "border-b border-gray-100" : ""}`}>
+            <div key={i.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 py-2.5 ${idx < allIssues.length - 1 ? "border-b border-gray-100" : ""}`}>
               <div className="flex items-center gap-4">
                 <span className="text-xs font-sans text-gray-400 w-16 flex-shrink-0">Issue #{i.issue_number}</span>
                 <span className="text-sm font-bold leading-snug">{i.headline}</span>
               </div>
               <Link href={`/issues/${i.slug}`}
-                className="text-xs font-sans text-[#1a6b3c] hover:underline flex-shrink-0 ml-4">
+                className="text-xs font-sans text-[#1a6b3c] hover:underline flex-shrink-0 sm:ml-4">
                 Read
               </Link>
             </div>
@@ -329,7 +311,7 @@ const HomePage = async () => {
       </div>
 
       <div className="py-8 border-b border-gray-200">
-        <div className="grid grid-cols-2 gap-8 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-center">
           <div>
             <h2 className="text-2xl font-bold mb-2">Free. Every Monday.</h2>
             <p className="text-sm font-sans text-gray-600 leading-relaxed">
@@ -349,7 +331,7 @@ const HomePage = async () => {
         </div>
       </div>
 
-      <footer className="pt-4 flex justify-between items-center">
+      <footer className="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-center">
         <span className="text-xs font-sans text-gray-400">2026 GeoBriefing · Covering the whole map</span>
         <div className="flex gap-4">
           <Link href="/about" className="text-xs font-sans text-gray-400 hover:text-[#1a6b3c]">About</Link>

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Logo from "@/components/Logo"
+import AdminHeader from "@/components/AdminHeader"
 import { supabaseAdmin as supabase } from "@/lib/supabase"
 
 interface Issue {
@@ -141,32 +141,9 @@ export default function MapsAdminPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8 font-serif">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
 
-      <header className="border-t-4 border-b border-[#1a1a1a] mb-1 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">Admin · Maps Don&apos;t Lie</span>
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">geobriefing.com</span>
-        </div>
-        <div className="flex items-center justify-center gap-6 py-4 border-t border-b border-[#1a1a1a]">
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-          <Link href="/"><Logo size="lg" /></Link>
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-xs font-sans text-gray-500">South Asia · Middle East · Central Asia · Global</span>
-          <span className="text-xs font-sans text-gray-500">Free weekly · GIS intelligence</span>
-        </div>
-      </header>
-
-      <nav className="flex gap-6 py-2 border-b border-gray-300 mb-8 font-sans text-xs tracking-widest uppercase">
-        <Link href="/admin/comics" className="text-gray-500 hover:text-[#1a1a1a]">Comics</Link>
-        <Link href="/admin/maps" className="text-[#1a6b3c] font-bold">Maps</Link>
-        <Link href="/admin/content" className="text-gray-500 hover:text-[#1a1a1a]">Content</Link>
-        <Link href="/admin/settings" className="text-gray-500 hover:text-[#1a1a1a]">Settings</Link>
-        <Link href="/" className="text-gray-500 hover:text-[#1a1a1a]">View site</Link>
-        <button onClick={handleLogout} className="text-red-400 hover:text-red-600 font-bold ml-auto">Logout</button>
-      </nav>
+      <AdminHeader active="maps" topLeftLabel="Admin · Maps Don't Lie" onLogout={handleLogout} />
 
       {message && (
         <div className={`mb-6 px-4 py-3 text-sm font-sans border ${
@@ -176,12 +153,12 @@ export default function MapsAdminPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
         <h2 className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500">
           All Maps ({drafts.length})
         </h2>
         <button onClick={() => setShowNewForm(!showNewForm)}
-          className="text-xs font-sans font-bold tracking-widest uppercase text-[#1a6b3c] hover:underline">
+          className="text-xs font-sans font-bold tracking-widest uppercase text-[#1a6b3c] hover:underline w-fit">
           + Add new map
         </button>
       </div>
@@ -212,7 +189,10 @@ export default function MapsAdminPage() {
             className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a]" />
           <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleNewImageChange}
             className="w-full text-sm font-sans border border-gray-300 px-3 py-2 cursor-pointer" />
-          {newImagePreview && <img src={newImagePreview} alt="Preview" className="w-full border border-gray-200" />}
+          {newImagePreview && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={newImagePreview} alt="Preview" className="w-full border border-gray-200" />
+          )}
           <button onClick={publishNewMap} disabled={uploading}
             className="bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase py-2 hover:bg-[#1a6b3c] transition-colors disabled:opacity-50">
             {uploading ? "Publishing..." : "Publish Map"}
@@ -223,8 +203,8 @@ export default function MapsAdminPage() {
       <div className="flex flex-col gap-4">
         {drafts.map(draft => (
           <div key={draft.id} className={`border p-4 ${draft.status === "published" ? "border-gray-200" : "border-amber-200 bg-amber-50"}`}>
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-xs font-sans font-bold px-2 py-0.5 rounded ${
                   draft.status === "published" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
                 }`}>
@@ -251,6 +231,7 @@ export default function MapsAdminPage() {
               </a>
             )}
             {draft.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={draft.image_url} alt={draft.title} className="w-full max-h-40 object-cover border border-gray-200 mt-2" />
             )}
           </div>
@@ -258,8 +239,8 @@ export default function MapsAdminPage() {
       </div>
 
       {editingDraft && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white max-w-2xl w-full max-h-screen overflow-y-auto p-6 font-serif">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 font-serif">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold">Edit + Publish Map</h2>
               <button onClick={() => setEditingDraft(null)} className="text-gray-400 hover:text-[#1a1a1a] text-xl font-bold">×</button>
@@ -280,7 +261,7 @@ export default function MapsAdminPage() {
               <input type="url" value={editingDraft.source_url || ""} onChange={e => setEditingDraft({ ...editingDraft, source_url: e.target.value })}
                 className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none" placeholder="Source URL" />
               {editingDraft.source_url && (
-                <div className="text-xs font-sans bg-gray-50 p-3 border border-gray-200">
+                <div className="text-xs font-sans bg-gray-50 p-3 border border-gray-200 break-all">
                   Find the map at: <a href={editingDraft.source_url} target="_blank" rel="noopener noreferrer"
                     className="text-[#1a6b3c] hover:underline">{editingDraft.source_url}</a>
                 </div>
@@ -289,7 +270,10 @@ export default function MapsAdminPage() {
                 <label className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 block mb-2">Upload Map Image</label>
                 <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleDraftImageChange}
                   className="w-full text-sm font-sans border border-gray-300 px-3 py-2 cursor-pointer" />
-                {imagePreview && <img src={imagePreview} alt="Preview" className="mt-3 w-full border border-gray-200" />}
+                {imagePreview && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imagePreview} alt="Preview" className="mt-3 w-full border border-gray-200" />
+                )}
               </div>
               <button onClick={publishDraft} disabled={uploading}
                 className="bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase py-3 hover:bg-[#1a6b3c] transition-colors disabled:opacity-50">

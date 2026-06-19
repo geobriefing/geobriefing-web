@@ -6,11 +6,10 @@ const Logo = ({ size = 'lg' }: { size?: 'sm' | 'lg' }) => {
   return (
     <Link href="/" className="inline-block">
       <svg
-        width={isLarge ? 440 : 220}
-        height={isLarge ? 64 : 32}
         viewBox="0 0 440 64"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        className={isLarge ? 'w-full max-w-[440px] h-auto' : 'w-full max-w-[220px] h-auto'}
       >
         <text
           x="0"

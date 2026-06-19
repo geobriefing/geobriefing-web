@@ -2,7 +2,7 @@
 
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
-import Logo from "@/components/Logo"
+import Header from "@/components/Header"
 import { notFound } from "next/navigation"
 import SatelliteSpot from "@/components/games/SatelliteSpot"
 import GeoGuesser from "@/components/games/GeoGuesser"
@@ -166,42 +166,20 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
   const crosswordGame = games.find(g => g.game_type === "crossword")
   const geoguesserGame = games.find(g => g.game_type === "geoguesser")
 
+  const topLeftLabel = `Issue #${issue.issue_number} · ${issue.published_at
+    ? new Date(issue.published_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+    : ""}`
+
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8 font-serif">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
 
-      <header className="border-t-4 border-b border-[#1a1a1a] mb-1 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">
-            Issue #{issue.issue_number} · {issue.published_at
-              ? new Date(issue.published_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-              : ""}
-          </span>
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">geobriefing.com</span>
-        </div>
-        <div className="flex items-center justify-center gap-6 py-4 border-t border-b border-[#1a1a1a]">
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-          <Logo size="lg" />
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-xs font-sans text-gray-500">South Asia · Middle East · Central Asia · Global</span>
-          <span className="text-xs font-sans text-gray-500">Free weekly · GIS intelligence</span>
-        </div>
-      </header>
-
-      <nav className="flex gap-6 py-2 border-b border-gray-300 mb-8 font-sans text-xs tracking-widest uppercase">
-        <Link href="/" className="text-gray-500 hover:text-[#1a1a1a]">This week</Link>
-        <Link href="/issues" className="text-gray-500 hover:text-[#1a1a1a]">All issues</Link>
-        <Link href="/jobs" className="text-gray-500 hover:text-[#1a1a1a]">Jobs</Link>
-        <Link href="/about" className="text-gray-500 hover:text-[#1a1a1a]">About</Link>
-        <Link href="/subscribe" className="text-gray-500 hover:text-[#1a1a1a]">Subscribe</Link>
-      </nav>
+      <Header active="all-issues" topLeftLabel={topLeftLabel} />
 
       <div className="mb-8">
         <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-2">
           Issue #{issue.issue_number} · Weekly briefing
         </p>
-        <h1 className="text-4xl font-bold leading-tight mb-5">{issue.headline}</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-5">{issue.headline}</h1>
 
         {quote && (
           <div className="border-l-4 border-gray-300 pl-5 my-6">
@@ -225,10 +203,10 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
 
       <SectionLabel id="news">GIS News Digest</SectionLabel>
 
-      <div className="columns-2 gap-8 mb-4" style={{ columnRule: "1px solid #e5e7eb" }}>
+      <div className="columns-1 md:columns-2 gap-8 mb-4 md:[column-rule:1px_solid_#e5e7eb]">
         {stories.map((story, i) => (
           <div key={story.id} className="break-inside-avoid mb-6 pb-6 border-b border-gray-100 last:border-0">
-            <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span className={`text-xs font-sans font-bold px-2 py-0.5 rounded ${regionColors[story.region] || "bg-gray-100 text-gray-700"}`}>
                 {story.region}
               </span>
@@ -265,7 +243,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
       {gisStoryData && (
         <>
           <SectionLabel id="story">GIS Story</SectionLabel>
-          <div className="columns-2 gap-8 mb-8" style={{ columnRule: "1px solid #e5e7eb" }}>
+          <div className="columns-1 md:columns-2 gap-8 mb-8 md:[column-rule:1px_solid_#e5e7eb]">
             <div className="break-inside-avoid">
               <span className={`text-xs font-sans font-bold px-2 py-0.5 rounded mb-3 inline-block ${
                 (gisStoryData as GISStory).story_type === "history" ? "bg-amber-100 text-amber-700" :
@@ -274,10 +252,10 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
               }`}>
                 {(gisStoryData as GISStory).story_type}
               </span>
-              <h2 className="text-2xl font-bold leading-snug mb-4 mt-2">{(gisStoryData as GISStory).title}</h2>
+              <h2 className="text-xl sm:text-2xl font-bold leading-snug mb-4 mt-2">{(gisStoryData as GISStory).title}</h2>
               <p className="text-sm font-sans text-gray-700 leading-relaxed">{(gisStoryData as GISStory).content}</p>
             </div>
-            <div className="break-inside-avoid flex flex-col gap-4">
+            <div className="break-inside-avoid flex flex-col gap-4 mt-6 md:mt-0">
               {facts[1] && (
                 <div className="border border-gray-300 bg-gray-50 p-4">
                   <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-2">Fun Fact</p>
@@ -315,9 +293,10 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
       {mapData && (
         <>
           <SectionLabel id="map">Maps Don&apos;t Lie</SectionLabel>
-          <div className="grid grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8">
             <div>
               {(mapData as MapDontLie).image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={(mapData as MapDontLie).image_url!} alt={(mapData as MapDontLie).title}
                   className="w-full border border-gray-200" />
               ) : (
@@ -341,7 +320,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
               }`}>
                 {(mapData as MapDontLie).map_type}
               </span>
-              <h2 className="text-xl font-bold leading-snug mb-3 mt-2">{(mapData as MapDontLie).title}</h2>
+              <h2 className="text-lg sm:text-xl font-bold leading-snug mb-3 mt-2">{(mapData as MapDontLie).title}</h2>
               <p className="text-sm font-sans text-gray-700 leading-relaxed">{(mapData as MapDontLie).commentary}</p>
             </div>
           </div>
@@ -356,6 +335,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
               {comics.map((comic) => (
                 <div key={comic.id} className="max-w-2xl mx-auto w-full">
                   {comic.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={comic.image_url} alt={comic.title}
                       className="w-full border border-gray-200" />
                   ) : (
@@ -375,7 +355,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
           <SectionLabel id="games">This Week&apos;s Games</SectionLabel>
 
           {satelliteGame && (
-            <div className="mb-10">
+            <div className="mb-10 overflow-x-auto">
               <h3 className="text-base font-bold mb-1">Satellite Spot</h3>
               <p className="text-xs font-sans text-gray-500 mb-4">Where on Earth is this?</p>
               <SatelliteSpot data={satelliteGame.data as unknown as Parameters<typeof SatelliteSpot>[0]["data"]} />
@@ -383,7 +363,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
           )}
 
           {geoguesserGame && (
-            <div className="mb-10">
+            <div className="mb-10 overflow-x-auto">
               <h3 className="text-base font-bold mb-1">GeoGuesser</h3>
               <p className="text-xs font-sans text-gray-500 mb-4">Drop a pin to guess this location.</p>
               <GeoGuesser data={geoguesserGame.data as unknown as Parameters<typeof GeoGuesser>[0]["data"]} />
@@ -391,7 +371,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
           )}
 
           {crosswordGame && (
-            <div className="mb-10">
+            <div className="mb-10 overflow-x-auto">
               <h3 className="text-base font-bold mb-1">
                 GIS Crossword — {(crosswordGame.data as {title?: string}).title || "This Week"}
               </h3>
@@ -410,15 +390,15 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
           <div className="mb-8">
             {events.map((event, i) => (
               <div key={event.id} className={`flex items-start gap-4 py-3 ${i < events.length - 1 ? "border-b border-gray-100" : ""}`}>
-                <div className="w-14 text-center flex-shrink-0 border-r border-gray-200 pr-4">
+                <div className="w-12 sm:w-14 text-center flex-shrink-0 border-r border-gray-200 pr-2 sm:pr-4">
                   <div className="text-xs font-sans font-bold text-[#1a6b3c] uppercase">
                     {new Date(event.start_date).toLocaleDateString("en-GB", { month: "short" })}
                   </div>
-                  <div className="text-2xl font-bold leading-tight">
+                  <div className="text-xl sm:text-2xl font-bold leading-tight">
                     {new Date(event.start_date).getDate()}
                   </div>
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                     <a href={event.url} target="_blank" rel="noopener noreferrer"
                       className="text-sm font-bold hover:text-[#1a6b3c]">
@@ -454,10 +434,10 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
       {jobs.length > 0 && (
         <>
           <SectionLabel id="jobs">GIS Jobs</SectionLabel>
-          <div className="grid grid-cols-2 gap-x-8 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 mb-4">
             {jobs.map((job) => (
               <div key={job.id} className="flex items-start justify-between gap-2 py-3 border-b border-gray-100">
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className={`text-xs font-sans font-bold px-1.5 py-0.5 rounded ${
                       job.bucket === "pakistan" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
@@ -491,7 +471,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
         <p className="text-sm font-sans text-gray-600 mb-4">
           Subscribe to get Issue #{issue.issue_number + 1} in your inbox next Monday.
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input type="email" placeholder="your@email.com"
             className="flex-1 border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a6b3c]" />
           <button className="bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase px-4 py-2 hover:bg-[#1a6b3c] transition-colors">
@@ -500,7 +480,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
         </div>
       </div>
 
-      <div className="flex justify-between items-center border-t-2 border-[#1a1a1a] pt-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between sm:items-center border-t-2 border-[#1a1a1a] pt-4">
         <div className="flex gap-4">
           <Link href="/issues" className="text-xs font-sans text-[#1a6b3c] hover:underline">All issues</Link>
           <Link href="/about" className="text-xs font-sans text-gray-400 hover:text-[#1a6b3c]">About</Link>

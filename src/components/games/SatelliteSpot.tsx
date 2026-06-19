@@ -21,11 +21,12 @@ export default function SatelliteSpot({ data }: { data: SatelliteSpotData }) {
     setRevealed(true)
   }
 
+  // eslint-disable-next-line react-hooks/purity
   const shuffled = [...data.options].sort(() => Math.random() - 0.5)
 
   return (
     <div className="border border-gray-200">
-      <div className="w-full h-72 bg-gray-100 overflow-hidden">
+      <div className="w-full h-56 sm:h-72 bg-gray-100 overflow-hidden">
         {data.use_embed ? (
           <iframe
             src={data.image_url}
@@ -33,6 +34,7 @@ export default function SatelliteSpot({ data }: { data: SatelliteSpotData }) {
             title="Satellite view"
           />
         ) : (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={data.image_url}
             alt="Satellite view - where is this?"
@@ -40,11 +42,11 @@ export default function SatelliteSpot({ data }: { data: SatelliteSpotData }) {
           />
         )}
       </div>
-      <div className="p-4">
+      <div className="p-3 sm:p-4">
         <p className="text-xs font-sans font-bold text-gray-500 uppercase tracking-widest mb-3">
           Where on Earth is this?
         </p>
-        <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
           {shuffled.map((option) => {
             const isCorrect = option === data.answer
             const isSelected = option === selected

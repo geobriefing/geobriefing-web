@@ -1,8 +1,7 @@
 ﻿"use client"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import Logo from "@/components/Logo"
+import AdminHeader from "@/components/AdminHeader"
 import { supabaseAdmin as supabase } from "@/lib/supabase"
 
 interface Series {
@@ -99,35 +98,12 @@ export default function ComicsAdminPage() {
   const selectedSeriesData = series.find(s => s.id === selectedSeries)
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8 font-serif">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
 
-      <header className="border-t-4 border-b border-[#1a1a1a] mb-1 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">Admin · Comics</span>
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">geobriefing.com</span>
-        </div>
-        <div className="flex items-center justify-center gap-6 py-4 border-t border-b border-[#1a1a1a]">
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-          <Link href="/"><Logo size="lg" /></Link>
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-xs font-sans text-gray-500">South Asia · Middle East · Central Asia · Global</span>
-          <span className="text-xs font-sans text-gray-500">Free weekly · GIS intelligence</span>
-        </div>
-      </header>
-
-      <nav className="flex gap-6 py-2 border-b border-gray-300 mb-8 font-sans text-xs tracking-widest uppercase">
-        <Link href="/admin/comics" className="text-[#1a6b3c] font-bold">Comics</Link>
-        <Link href="/admin/maps" className="text-gray-500 hover:text-[#1a1a1a]">Maps</Link>
-        <Link href="/admin/content" className="text-gray-500 hover:text-[#1a1a1a]">Content</Link>
-        <Link href="/admin/settings" className="text-gray-500 hover:text-[#1a1a1a]">Settings</Link>
-        <Link href="/" className="text-gray-500 hover:text-[#1a1a1a]">View site</Link>
-        <button onClick={handleLogout} className="text-red-400 hover:text-red-600 font-bold ml-auto">Logout</button>
-      </nav>
+      <AdminHeader active="comics" topLeftLabel="Admin · Comics" onLogout={handleLogout} />
 
       <div className="flex flex-col gap-5">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 block mb-2">Series *</label>
             <select value={selectedSeries} onChange={e => setSelectedSeries(e.target.value)}
@@ -180,6 +156,7 @@ export default function ComicsAdminPage() {
           {imagePreview && (
             <div className="mt-3">
               <p className="text-xs font-sans text-gray-400 mb-2">Preview:</p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imagePreview} alt="Preview" className="w-full border border-gray-200" />
             </div>
           )}
