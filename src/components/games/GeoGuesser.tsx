@@ -9,7 +9,7 @@ interface GeoGuesserData {
   region: string
 }
 
-export default function GeoGuesser({ data }: { data: GeoGuesserData }) {
+const GeoGuesser = ({ data }: { data: GeoGuesserData }) => {
   const mapRef = useRef<HTMLDivElement>(null)
   const [guess, setGuess] = useState<{ lat: number; lon: number } | null>(null)
   const [revealed, setRevealed] = useState(false)
@@ -144,3 +144,5 @@ export default function GeoGuesser({ data }: { data: GeoGuesserData }) {
     </div>
   )
 }
+
+export default GeoGuesser

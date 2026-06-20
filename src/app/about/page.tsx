@@ -2,7 +2,7 @@
 import Link from "next/link"
 import Header from "@/components/Header"
 
-export default async function AboutPage() {
+const AboutPage = async () => {
   const { data: settingsData } = await supabase
     .from("site_settings")
     .select("id, value")
@@ -81,3 +81,5 @@ export default async function AboutPage() {
     </div>
   )
 }
+
+export default AboutPage

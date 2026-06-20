@@ -11,7 +11,7 @@ interface SatelliteSpotData {
   lon: number
 }
 
-export default function SatelliteSpot({ data }: { data: SatelliteSpotData }) {
+const SatelliteSpot = ({ data }: { data: SatelliteSpotData }) => {
   const [selected, setSelected] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(false)
 
@@ -75,3 +75,5 @@ export default function SatelliteSpot({ data }: { data: SatelliteSpotData }) {
     </div>
   )
 }
+
+export default SatelliteSpot

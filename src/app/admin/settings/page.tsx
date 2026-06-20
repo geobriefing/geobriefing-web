@@ -5,7 +5,7 @@ import Link from "next/link"
 import Logo from "@/components/Logo"
 import { supabaseAdmin as supabase } from "@/lib/supabase"
 
-export default function SettingsAdminPage() {
+const SettingsAdminPage = () => {
   const router = useRouter()
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState("")
@@ -265,3 +265,5 @@ export default function SettingsAdminPage() {
     </div>
   )
 }
+
+export default SettingsAdminPage

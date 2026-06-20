@@ -25,8 +25,8 @@ const AdminPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center font-serif">
-      <div className="border border-[#1a1a1a] p-8 w-80">
+    <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center font-serif px-4">
+      <div className="border border-[#1a1a1a] p-6 sm:p-8 w-full max-w-xs">
         <div className="text-center mb-6">
           <h1 className="text-xl font-bold">GeoBriefing</h1>
           <p className="text-xs font-sans text-gray-400 mt-1 tracking-widest uppercase">Admin</p>

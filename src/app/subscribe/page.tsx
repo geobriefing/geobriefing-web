@@ -3,7 +3,7 @@ import { useState } from "react"
 import Link from "next/link"
 import Header from "@/components/Header"
 
-export default function SubscribePage() {
+const SubscribePage = () => {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
@@ -150,3 +150,5 @@ export default function SubscribePage() {
     </div>
   )
 }
+
+export default SubscribePage

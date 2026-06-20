@@ -16,7 +16,7 @@ interface Issue {
   headline: string
 }
 
-export default function ComicsAdminPage() {
+const ComicsAdminPage = () => {
   const router = useRouter()
   const [series, setSeries] = useState<Series[]>([])
   const [issues, setIssues] = useState<Issue[]>([])
@@ -178,3 +178,5 @@ export default function ComicsAdminPage() {
     </div>
   )
 }
+
+export default ComicsAdminPage

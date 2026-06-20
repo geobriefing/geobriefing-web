@@ -15,7 +15,7 @@ interface CrosswordData {
   clues: CrosswordClue[]
 }
 
-export default function GISCrossword({ data }: { data: CrosswordData }) {
+const GISCrossword = ({ data }: { data: CrosswordData }) => {
   const GRID_SIZE = 10
   const [grid, setGrid] = useState<string[][]>(
     Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(""))
@@ -183,3 +183,5 @@ export default function GISCrossword({ data }: { data: CrosswordData }) {
     </div>
   )
 }
+
+export default GISCrossword

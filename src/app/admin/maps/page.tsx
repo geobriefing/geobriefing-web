@@ -22,7 +22,7 @@ interface MapDraft {
   issue_id: string | null
 }
 
-export default function MapsAdminPage() {
+const MapsAdminPage = () => {
   const router = useRouter()
   const [issues, setIssues] = useState<Issue[]>([])
   const [drafts, setDrafts] = useState<MapDraft[]>([])
@@ -286,3 +286,5 @@ export default function MapsAdminPage() {
     </div>
   )
 }
+
+export default MapsAdminPage

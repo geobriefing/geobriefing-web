@@ -9,7 +9,7 @@ interface Joke { id: string; setup: string; punchline: string; topic: string }
 interface Fact { id: string; fact: string; source: string; topic: string }
 interface Story { id: string; title: string; content: string; story_type: string; status: string }
 
-export default function ContentAdminPage() {
+const ContentAdminPage = () => {
   const router = useRouter()
   const [issues, setIssues] = useState<Issue[]>([])
   const [jokes, setJokes] = useState<Joke[]>([])
@@ -212,3 +212,5 @@ export default function ContentAdminPage() {
     </div>
   )
 }
+
+export default ContentAdminPage
