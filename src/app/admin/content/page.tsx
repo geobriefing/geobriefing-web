@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import AdminHeader from "@/components/AdminHeader"
-import { supabaseAdmin as supabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase"
 
 interface Issue { id: string; issue_number: number; headline: string; editor_note: string | null; status: string }
 interface Joke { id: string; setup: string; punchline: string; topic: string }

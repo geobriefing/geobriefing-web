@@ -5,23 +5,43 @@ import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 
 const AdminPage = () => {
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("gb_admin")) {
-      router.push("/admin/comics")
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession()
+      if (data.session) {
+        router.push("/admin/review")
+      } else {
+        setCheckingSession(false)
+      }
     }
+    checkSession()
   }, [])
 
-  const handleLogin = () => {
-    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
-      localStorage.setItem("gb_admin", "true")
-      router.push("/admin/comics")
-    } else {
-      setError("Wrong password")
+  const handleLogin = async () => {
+    setError("")
+    setLoading(true)
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    setLoading(false)
+    if (signInError) {
+      setError("Invalid email or password.")
+      return
     }
+    router.push("/admin/review")
+  }
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
+        <span className="text-xs font-sans text-gray-400">Loading...</span>
+      </div>
+    )
   }
 
   return (
@@ -31,6 +51,14 @@ const AdminPage = () => {
           <h1 className="text-xl font-bold">GeoBriefing</h1>
           <p className="text-xs font-sans text-gray-400 mt-1 tracking-widest uppercase">Admin</p>
         </div>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          className="w-full border border-gray-300 px-3 py-2 text-sm font-sans mb-3 outline-none focus:border-[#1a1a1a]"
+        />
         <input
           type="password"
           placeholder="Password"
@@ -42,9 +70,10 @@ const AdminPage = () => {
         {error && <p className="text-red-500 text-xs font-sans mb-3">{error}</p>}
         <button
           onClick={handleLogin}
-          className="w-full bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase py-2 hover:bg-[#1a6b3c] transition-colors"
+          disabled={loading}
+          className="w-full bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase py-2 hover:bg-[#1a6b3c] transition-colors disabled:opacity-50"
         >
-          Enter
+          {loading ? "Signing in..." : "Enter"}
         </button>
         <div className="mt-6 pt-4 border-t border-gray-100">
           <Link href="/" className="text-xs font-sans text-gray-400 hover:text-[#1a6b3c]">

@@ -1,8 +1,8 @@
 ﻿"use client"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import AdminHeader from "@/components/AdminHeader"
-import { supabaseAdmin as supabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase"
+import { useAdminAuth } from "@/lib/useAdminAuth"
 
 interface Series {
   id: string
@@ -17,7 +17,7 @@ interface Issue {
 }
 
 const ComicsAdminPage = () => {
-  const router = useRouter()
+  const { ready, logout } = useAdminAuth()
   const [series, setSeries] = useState<Series[]>([])
   const [issues, setIssues] = useState<Issue[]>([])
   const [selectedSeries, setSelectedSeries] = useState("")
@@ -31,12 +31,8 @@ const ComicsAdminPage = () => {
   const [message, setMessage] = useState("")
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("gb_admin")) {
-      router.push("/admin")
-      return
-    }
-    loadData()
-  }, [])
+    if (ready) loadData()
+  }, [ready])
 
   const loadData = async () => {
     const { data: seriesData } = await supabase.from("comic_series").select("*").order("title")
@@ -74,10 +70,11 @@ const ComicsAdminPage = () => {
         script,
         image_url: urlData.publicUrl,
         issue_number: issue?.issue_number,
-        published_at: new Date().toISOString(),
+        status: "draft",
+        published_at: null,
       })
       if (dbError) throw dbError
-      setMessage("Comic strip uploaded successfully!")
+      setMessage("Comic strip uploaded as draft — approve it in the Editor's Desk before the issue is published.")
       setTitle("")
       setScript("")
       setGisConcept("")
@@ -90,17 +87,18 @@ const ComicsAdminPage = () => {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("gb_admin")
-    router.push("/admin")
-  }
-
   const selectedSeriesData = series.find(s => s.id === selectedSeries)
+
+  if (!ready) return (
+    <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
+      <span className="text-xs font-sans text-gray-400">Loading...</span>
+    </div>
+  )
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
 
-      <AdminHeader active="comics" topLeftLabel="Admin · Comics" onLogout={handleLogout} />
+      <AdminHeader active="comics" topLeftLabel="Admin · Comics" onLogout={logout} />
 
       <div className="flex flex-col gap-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

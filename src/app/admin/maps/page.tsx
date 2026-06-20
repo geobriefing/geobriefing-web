@@ -1,9 +1,8 @@
 ﻿"use client"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
 import AdminHeader from "@/components/AdminHeader"
-import { supabaseAdmin as supabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase"
+import { useAdminAuth } from "@/lib/useAdminAuth"
 
 interface Issue {
   id: string
@@ -23,7 +22,7 @@ interface MapDraft {
 }
 
 const MapsAdminPage = () => {
-  const router = useRouter()
+  const { ready, logout } = useAdminAuth()
   const [issues, setIssues] = useState<Issue[]>([])
   const [drafts, setDrafts] = useState<MapDraft[]>([])
   const [editingDraft, setEditingDraft] = useState<MapDraft | null>(null)
@@ -37,23 +36,14 @@ const MapsAdminPage = () => {
   const [newImagePreview, setNewImagePreview] = useState("")
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("gb_admin")) {
-      router.push("/admin")
-      return
-    }
-    loadData()
-  }, [])
+    if (ready) loadData()
+  }, [ready])
 
   const loadData = async () => {
     const { data: issuesData } = await supabase.from("issues").select("id, issue_number, headline").order("issue_number", { ascending: false })
     const { data: draftsData } = await supabase.from("maps_dont_lie").select("*").order("created_at", { ascending: false })
     setIssues(issuesData || [])
     setDrafts(draftsData || [])
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem("gb_admin")
-    router.push("/admin")
   }
 
   const handleDraftImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,10 +84,10 @@ const MapsAdminPage = () => {
         map_type: editingDraft.map_type,
         source_url: editingDraft.source_url,
         image_url: imageUrl,
-        status: "published",
+        status: "approved",
       }).eq("id", editingDraft.id)
       if (error) throw error
-      setMessage("Map published!")
+      setMessage("Map approved!")
       setEditingDraft(null)
       setImageFile(null)
       setImagePreview("")
@@ -119,9 +109,9 @@ const MapsAdminPage = () => {
     try {
       let imageUrl = null
       if (newImageFile) imageUrl = await uploadImage(newImageFile, "map-new")
-      const { error } = await supabase.from("maps_dont_lie").insert({ ...newMap, image_url: imageUrl, status: "published" })
+      const { error } = await supabase.from("maps_dont_lie").insert({ ...newMap, image_url: imageUrl, status: "approved" })
       if (error) throw error
-      setMessage("Map published!")
+      setMessage("Map approved!")
       setNewMap({ title: "", commentary: "", map_type: "misleading", source_url: "", issue_id: "" })
       setNewImageFile(null)
       setNewImagePreview("")
@@ -140,10 +130,16 @@ const MapsAdminPage = () => {
     loadData()
   }
 
+  if (!ready) return (
+    <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
+      <span className="text-xs font-sans text-gray-400">Loading...</span>
+    </div>
+  )
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
 
-      <AdminHeader active="maps" topLeftLabel="Admin · Maps Don't Lie" onLogout={handleLogout} />
+      <AdminHeader active="maps" topLeftLabel="Admin · Maps Don't Lie" onLogout={logout} />
 
       {message && (
         <div className={`mb-6 px-4 py-3 text-sm font-sans border ${
@@ -195,18 +191,18 @@ const MapsAdminPage = () => {
           )}
           <button onClick={publishNewMap} disabled={uploading}
             className="bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase py-2 hover:bg-[#1a6b3c] transition-colors disabled:opacity-50">
-            {uploading ? "Publishing..." : "Publish Map"}
+            {uploading ? "Saving..." : "Approve Map"}
           </button>
         </div>
       )}
 
       <div className="flex flex-col gap-4">
         {drafts.map(draft => (
-          <div key={draft.id} className={`border p-4 ${draft.status === "published" ? "border-gray-200" : "border-amber-200 bg-amber-50"}`}>
+          <div key={draft.id} className={`border p-4 ${draft.status === "approved" ? "border-gray-200" : "border-amber-200 bg-amber-50"}`}>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-xs font-sans font-bold px-2 py-0.5 rounded ${
-                  draft.status === "published" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                  draft.status === "approved" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
                 }`}>
                   {draft.status}
                 </span>
@@ -216,7 +212,7 @@ const MapsAdminPage = () => {
                 {draft.status === "draft" && (
                   <button onClick={() => { setEditingDraft({ ...draft }); setImagePreview(""); setImageFile(null) }}
                     className="text-xs font-sans text-[#1a6b3c] font-bold hover:underline">
-                    Edit + Publish
+                    Edit + Approve
                   </button>
                 )}
                 <button onClick={() => deleteMap(draft.id)} className="text-xs font-sans text-red-400 hover:underline">Delete</button>
@@ -242,7 +238,7 @@ const MapsAdminPage = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
           <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 font-serif">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold">Edit + Publish Map</h2>
+              <h2 className="text-lg font-bold">Edit + Approve Map</h2>
               <button onClick={() => setEditingDraft(null)} className="text-gray-400 hover:text-[#1a1a1a] text-xl font-bold">×</button>
             </div>
             <div className="flex flex-col gap-4">
@@ -277,7 +273,7 @@ const MapsAdminPage = () => {
               </div>
               <button onClick={publishDraft} disabled={uploading}
                 className="bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase py-3 hover:bg-[#1a6b3c] transition-colors disabled:opacity-50">
-                {uploading ? "Publishing..." : "Publish Map"}
+                {uploading ? "Saving..." : "Approve Map"}
               </button>
             </div>
           </div>

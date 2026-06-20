@@ -1,7 +1,7 @@
 import Link from "next/link"
 import Logo from "@/components/Logo"
 
-type AdminNavKey = "comics" | "maps" | "content" | "settings"
+type AdminNavKey = "review" | "comics" | "maps" | "content" | "settings"
 
 interface AdminHeaderProps {
   active: AdminNavKey
@@ -11,6 +11,7 @@ interface AdminHeaderProps {
 }
 
 const NAV_ITEMS: { key: AdminNavKey; label: string; href: string }[] = [
+  { key: "review", label: "Editor's Desk", href: "/admin/review" },
   { key: "comics", label: "Comics", href: "/admin/comics" },
   { key: "maps", label: "Maps", href: "/admin/maps" },
   { key: "content", label: "Content", href: "/admin/content" },

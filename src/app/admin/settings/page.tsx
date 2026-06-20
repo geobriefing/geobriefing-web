@@ -1,12 +1,12 @@
 ﻿"use client"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Logo from "@/components/Logo"
-import { supabaseAdmin as supabase } from "@/lib/supabase"
+import AdminHeader from "@/components/AdminHeader"
+import { supabase } from "@/lib/supabase"
+import { useAdminAuth } from "@/lib/useAdminAuth"
 
 const SettingsAdminPage = () => {
-  const router = useRouter()
+  const { ready, logout } = useAdminAuth()
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState("")
   const [currentPhoto, setCurrentPhoto] = useState("")
@@ -22,12 +22,8 @@ const SettingsAdminPage = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("gb_admin")) {
-      router.push("/admin")
-      return
-    }
-    loadSettings()
-  }, [])
+    if (ready) loadSettings()
+  }, [ready])
 
   const loadSettings = async () => {
     const { data } = await supabase.from("site_settings").select("id, value")
@@ -41,11 +37,6 @@ const SettingsAdminPage = () => {
       setCurrentPhoto(s["editor_photo_url"] || "")
     }
     setLoading(false)
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem("gb_admin")
-    router.push("/admin")
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +89,7 @@ const SettingsAdminPage = () => {
     }
   }
 
-  if (loading) return (
+  if (!ready || loading) return (
     <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
       <span className="text-xs font-sans text-gray-400">Loading...</span>
     </div>
@@ -107,30 +98,7 @@ const SettingsAdminPage = () => {
   return (
     <div className="max-w-3xl mx-auto px-6 py-8 font-serif">
 
-      <header className="border-t-4 border-b border-[#1a1a1a] mb-1 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">Admin · Settings</span>
-          <span className="text-xs font-sans tracking-widest text-gray-500 uppercase">geobriefing.com</span>
-        </div>
-        <div className="flex items-center justify-center gap-6 py-4 border-t border-b border-[#1a1a1a]">
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-          <Link href="/"><Logo size="lg" /></Link>
-          <div className="flex-1 h-px bg-[#1a1a1a]" />
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-xs font-sans text-gray-500">South Asia · Middle East · Central Asia · Global</span>
-          <span className="text-xs font-sans text-gray-500">Free weekly · GIS intelligence</span>
-        </div>
-      </header>
-
-      <nav className="flex gap-6 py-2 border-b border-gray-300 mb-8 font-sans text-xs tracking-widest uppercase">
-        <Link href="/admin/comics" className="text-gray-500 hover:text-[#1a1a1a]">Comics</Link>
-        <Link href="/admin/maps" className="text-gray-500 hover:text-[#1a1a1a]">Maps</Link>
-        <Link href="/admin/content" className="text-gray-500 hover:text-[#1a1a1a]">Content</Link>
-        <Link href="/admin/settings" className="text-[#1a6b3c] font-bold">Settings</Link>
-        <Link href="/" className="text-gray-500 hover:text-[#1a1a1a]">View site</Link>
-        <button onClick={handleLogout} className="text-red-400 hover:text-red-600 font-bold ml-auto">Logout</button>
-      </nav>
+      <AdminHeader active="settings" topLeftLabel="Admin · Settings" onLogout={logout} />
 
       <div className="flex gap-0 border-b border-gray-200 mb-8">
         {(["photo", "about"] as const).map(t => (
