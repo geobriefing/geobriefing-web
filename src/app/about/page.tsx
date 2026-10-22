@@ -1,83 +1,92 @@
-﻿import { supabase } from "@/lib/supabase"
+﻿export const revalidate = 0
+
 import Link from "next/link"
-import Header from "@/components/Header"
+import { getSettings } from "@/lib/settings"
+import { paragraphs } from "@/lib/format"
+import Masthead from "@/components/Masthead"
+import Footer from "@/components/Footer"
+import { TypePill } from "@/components/Pills"
+import { ImagePlaceholder, Label, SectionLabel } from "@/components/Editorial"
+
+const STEPS: { title: string; text: string; who: "AI-assisted" | "Human" }[] = [
+  { title: "Collect", text: "Software gathers candidate stories, events and maps from public sources across the region.", who: "AI-assisted" },
+  { title: "Draft", text: "A language model drafts summaries and teasers. They are marked as drafts.", who: "AI-assisted" },
+  { title: "Edit", text: "The editor rewrites, cuts and checks every item against its source.", who: "Human" },
+  { title: "Review", text: "Each section is reviewed and approved before it is published.", who: "Human" },
+]
 
 const AboutPage = async () => {
-  const { data: settingsData } = await supabase
-    .from("site_settings")
-    .select("id, value")
-
-  const settings: Record<string, string> = {}
-  if (settingsData) {
-    settingsData.forEach((s: { id: string; value: string }) => {
-      settings[s.id] = s.value
-    })
-  }
-
-  const editorName = settings["editor_name"] || "Aneeqa Abrar"
-  const editorBio = settings["editor_bio"] || ""
-  const editorMission = settings["editor_mission"] || ""
-  const editorContact = settings["editor_contact"] || "hello@geobriefing.com"
-  const editorPhotoUrl = settings["editor_photo_url"] || ""
+  const settings = await getSettings()
+  const bio = paragraphs(settings.editorBio)
+  const mission = paragraphs(settings.editorMission)
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
+    <div className="min-h-screen">
+      <Masthead active="about" />
 
-      <Header active="about" topLeftLabel="About" />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 pb-10 sm:pb-14">
+        <div className="pt-7 sm:pt-10 pb-6 sm:pb-7 border-b-2 border-ink">
+          <Label>About</Label>
+          <h1 className="mt-2.5 font-display font-bold text-[30px] sm:text-[44px] leading-[1.08] tracking-[-0.012em] max-w-[760px] text-balance">
+            A weekly briefing for people who make and read maps
+          </h1>
+        </div>
 
-      <div className="border-t-2 border-[#1a1a1a] pt-8 mb-10">
-        <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">The editor</p>
-        <h1 className="text-2xl sm:text-3xl font-bold mb-6">{editorName}</h1>
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] pt-7 sm:pt-8 gap-y-10">
+          <div className="md:pr-9">
+            <p className="mb-[18px] font-serif text-[17.5px] sm:text-long leading-[1.7] text-ink-2">
+              GeoBriefing is a free newsletter and website for the global geospatial community, with a focus on South
+              Asia, the Middle East and Central Asia. It comes out every {settings.publishDay} afternoon and covers
+              everything that happened in the geospatial world that week. It is independent and carries no
+              ads. <Link href="/sources" className="text-accent underline underline-offset-[3px] decoration-1 hover:text-accent-deep">See the sources we read</Link>.
+            </p>
+            <p className="mb-8 font-serif text-[17.5px] sm:text-long leading-[1.7] text-ink-2">
+              Each issue has the week&apos;s GIS news, one longer story, a map worth arguing about, comics, games and
+              upcoming events.
+            </p>
+            {mission.map((p, i) => (
+              <p key={i} className="mb-[18px] last:mb-8 font-serif text-[17.5px] sm:text-long leading-[1.7] text-ink-2">{p}</p>
+            ))}
 
-        <div className="flex flex-col sm:flex-row gap-6 mb-8 items-start">
-          {editorPhotoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={editorPhotoUrl}
-              alt={editorName}
-              className="w-28 h-28 object-cover border border-gray-200 flex-shrink-0"
-            />
-          ) : (
-            <div className="w-28 h-28 bg-gray-100 border border-dashed border-gray-300 flex-shrink-0 flex items-center justify-center">
-              <span className="text-xs font-sans text-gray-400 text-center px-2">Photo</span>
-            </div>
-          )}
-          <div className="flex flex-col gap-4 text-sm font-sans text-gray-700 leading-relaxed">
-            {editorBio && <p>{editorBio}</p>}
-            {editorMission && <p>{editorMission}</p>}
-            <p>Every issue is a mix of human editorial judgment and AI assistance. Groq&apos;s Llama model scrapes and scores hundreds of stories each week. The editor reads, edits, rewrites, and decides what matters. The comic scripts are written by hand. The editorial voice is entirely human.</p>
-            <p>GeoBriefing is free, independent, and has no advertisers.</p>
+            <SectionLabel className="mb-2">How it is made</SectionLabel>
+            {STEPS.map((s, i) => (
+              <div key={s.title} className="grid grid-cols-[36px_minmax(0,1fr)] sm:grid-cols-[44px_minmax(0,1fr)_auto] gap-x-3.5 gap-y-2 items-baseline py-4 border-b border-hair">
+                <span className="font-display font-bold text-[22px] text-accent">{i + 1}</span>
+                <div>
+                  <div className="font-display font-semibold text-h3 leading-[1.3]">{s.title}</div>
+                  <div className="font-sans text-[15.5px] leading-[1.55] text-ink-3 mt-1">{s.text}</div>
+                </div>
+                <TypePill kind="process" value={s.who} className="col-start-2 sm:col-start-auto justify-self-start" />
+              </div>
+            ))}
           </div>
+
+          <aside className="md:border-l md:border-hair md:pl-7">
+            <SectionLabel className="mb-4">The editor</SectionLabel>
+            {settings.editorPhotoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img loading="lazy" src={settings.editorPhotoUrl} alt={settings.editorName} className="w-full aspect-[4/5] object-cover border border-hair grayscale" />
+            ) : (
+              <ImagePlaceholder label="Editor photo" className="aspect-[4/5]" />
+            )}
+            {settings.editorName && <div className="font-display font-bold text-[22px] leading-[1.2] mt-4">{settings.editorName}</div>}
+            <div className="font-sans font-medium text-caption tracking-meta uppercase text-meta mt-1">Founder &amp; editor</div>
+            {bio.map((p, i) => (
+              <p key={i} className="mt-3 font-sans text-base leading-[1.6] text-ink-2">{p}</p>
+            ))}
+            <div className="border-l-[3px] border-accent bg-accent-tint px-3.5 py-3 mt-3.5 font-serif text-[15px] leading-[1.5] text-ink-2">
+              &ldquo;Reply to any issue. I read every email, and the best replies end up in the next one.&rdquo;
+            </div>
+            {settings.editorContact && (
+              <div className="flex gap-4 mt-3.5 font-sans font-semibold text-[11.5px] tracking-meta uppercase">
+                <a href={`mailto:${settings.editorContact}`} className="text-accent hover:text-accent-deep">Email</a>
+              </div>
+            )}
+          </aside>
         </div>
-      </div>
+      </main>
 
-      <div className="border-t border-gray-200 pt-8 mb-10">
-        <h2 className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 mb-5">About this publication</h2>
-        <div className="flex flex-col gap-4 text-sm font-sans text-gray-700 leading-relaxed">
-          <p>GeoBriefing publishes every Monday. Each issue contains a curated news digest, original GIS stories, a Maps Don&apos;t Lie section, five recurring comic strips, interactive games, upcoming events, job listings, jokes, fun facts, and a weekly quote from someone who thinks seriously about maps.</p>
-          <p>The scraper collects stories from RSS feeds, Medium, arXiv, and Reddit r/gis. Everything is tagged and scored by AI. Nothing publishes without human review.</p>
-          <p>GeoBriefing is built on Next.js, Supabase, and Groq.</p>
-        </div>
-      </div>
-
-      <div className="border-t border-gray-200 pt-8 mb-10">
-        <h2 className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 mb-4">Contact</h2>
-        <p className="text-sm font-sans text-gray-700">
-          Feedback, story tips, job listings, and comic strip ideas welcome at{" "}
-          <a href={`mailto:${editorContact}`} className="text-[#1a6b3c] hover:underline break-all">
-            {editorContact}
-          </a>
-        </p>
-      </div>
-
-      <div className="border-t-2 border-[#1a1a1a] pt-6 flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between sm:items-center">
-        <Link href="/subscribe"
-          className="text-xs font-sans font-bold tracking-widest uppercase text-[#1a6b3c] hover:underline">
-          Subscribe free →
-        </Link>
-        <Link href="/" className="text-xs font-sans text-gray-400 hover:text-[#1a6b3c]">Latest issue</Link>
-      </div>
-
+      <Footer />
     </div>
   )
 }

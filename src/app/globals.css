@@ -1,17 +1,148 @@
 @import "tailwindcss";
 
-:root {
-  --background: #FAFAF7;
-  --foreground: #1a1a1a;
+/* GeoBriefing design tokens — see design_handoff "Design System". */
+@theme {
+  --font-display: var(--font-source-serif), "Source Serif 4", Georgia, serif;
+  --font-serif: var(--font-source-serif), "Source Serif 4", Georgia, serif;
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", Arial, sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-paper: #FAFAF7;
+  --color-paper-2: #F2F1EB;
+  --color-card: #FFFFFF;
+  --color-ink: #1A1A1A;
+  --color-ink-2: #2B2B28;
+  --color-ink-3: #4A4A45;
+  --color-meta: #66665F;
+  --color-hair: #DDDCD5;
+  --color-hair-2: #CFCEC6;
+  --color-danger: #A8321E;
+  --color-danger-tint: #FBF0ED;
+  --color-warn: #8A5A00;
+  --color-warn-tint: #FDF6E6;
+  --color-accent: #1A6B3C;
+  --color-accent-tint: #F0F7F3;
+  --color-accent-deep: #134F2C;
+  --color-dot: #1A6B3C;
+
+  --text-display-xl: 3.25rem;
+  --text-display-xl--line-height: 1.04;
+  --text-display: 2.5rem;
+  --text-display--line-height: 1.08;
+  --text-h1: 1.875rem;
+  --text-h1--line-height: 1.15;
+  --text-h2: 1.5rem;
+  --text-h2--line-height: 1.2;
+  --text-h3: 1.1875rem;
+  --text-h3--line-height: 1.3;
+  --text-long: 1.1875rem;
+  --text-long--line-height: 1.7;
+  --text-digest: 1.03125rem;
+  --text-digest--line-height: 1.6;
+  --text-body: 1rem;
+  --text-body--line-height: 1.55;
+  --text-caption: .75rem;
+  --text-caption--line-height: 1.3;
+  --text-label: .6875rem;
+  --text-label--line-height: 1;
+
+  --tracking-meta: .12em;
+  --tracking-label: .18em;
+  --tracking-button: .16em;
+  --tracking-nav: .14em;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+/* Night edition: set explicitly via data-edition, or follow the OS when no choice is stored. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-edition="day"]) {
+    --color-paper: #131412; --color-paper-2: #1C1D1A; --color-card: #1F201D;
+    --color-ink: #ECEBE3; --color-ink-2: #CFCEC6; --color-ink-3: #B3B2AA;
+    --color-meta: #94938B; --color-hair: #2F302C; --color-hair-2: #3A3B36;
+    --color-accent: #5FBF87; --color-accent-tint: #17271D; --color-accent-deep: #8FD6AA;
+    --color-danger: #E2735F; --color-danger-tint: #2A1915; --color-warn: #E0B25A; --color-warn-tint: #29220F;
+    --color-dot: #3FA66A;
+    color-scheme: dark;
+  }
+}
+:root[data-edition="night"] {
+  --color-paper: #131412; --color-paper-2: #1C1D1A; --color-card: #1F201D;
+  --color-ink: #ECEBE3; --color-ink-2: #CFCEC6; --color-ink-3: #B3B2AA;
+  --color-meta: #94938B; --color-hair: #2F302C; --color-hair-2: #3A3B36;
+  --color-accent: #5FBF87; --color-accent-tint: #17271D; --color-accent-deep: #8FD6AA;
+  --color-danger: #E2735F; --color-danger-tint: #2A1915; --color-warn: #E0B25A; --color-warn-tint: #29220F;
+  --color-dot: #3FA66A;
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ── Pills ─────────────────────────────────────────────
+   Region pills are filled: same lightness and chroma, only the hue (--h) changes.
+   Global sets --c: 0. Type pills are outlined. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 4px 7px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.pill-region {
+  --c: 1;
+  padding: 5px 8px;
+  background: oklch(.95 calc(.035 * var(--c)) var(--h));
+  color: oklch(.42 calc(.09 * var(--c)) var(--h));
+  border-color: oklch(.86 calc(.05 * var(--c)) var(--h));
+}
+.pill-type {
+  --c: 1;
+  color: oklch(.45 calc(.11 * var(--c)) var(--h));
+  border-color: oklch(.75 calc(.08 * var(--c)) var(--h));
+}
+.pill-type[data-neutral] {
+  color: var(--color-ink-3);
+  border-color: #B9B8B0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-edition="day"]) .pill-region {
+    background: oklch(.3 calc(.05 * var(--c)) var(--h));
+    color: oklch(.86 calc(.08 * var(--c)) var(--h));
+    border-color: oklch(.42 calc(.06 * var(--c)) var(--h));
+  }
+  :root:not([data-edition="day"]) .pill-type {
+    color: oklch(.8 calc(.1 * var(--c)) var(--h));
+    border-color: oklch(.5 calc(.08 * var(--c)) var(--h));
+  }
+}
+:root[data-edition="night"] .pill-region {
+  background: oklch(.3 calc(.05 * var(--c)) var(--h));
+  color: oklch(.86 calc(.08 * var(--c)) var(--h));
+  border-color: oklch(.42 calc(.06 * var(--c)) var(--h));
+}
+:root[data-edition="night"] .pill-type {
+  color: oklch(.8 calc(.1 * var(--c)) var(--h));
+  border-color: oklch(.5 calc(.08 * var(--c)) var(--h));
+}
+
+/* Placeholder hatch for missing images */
+.hatch {
+  background: repeating-linear-gradient(135deg, var(--color-paper-2) 0 6px, var(--color-hair) 6px 12px);
+}
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

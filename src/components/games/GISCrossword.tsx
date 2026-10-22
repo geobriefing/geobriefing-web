@@ -1,5 +1,6 @@
 ﻿"use client"
 import { useState } from "react"
+import { SectionLabel } from "@/components/Editorial"
 
 interface CrosswordClue {
   direction: "ACROSS" | "DOWN"
@@ -15,8 +16,21 @@ interface CrosswordData {
   clues: CrosswordClue[]
 }
 
+const GRID_SIZE = 10
+
+const ClueList = ({ title, list }: { title: string; list: CrosswordClue[] }) => (
+  <div>
+    <div className="font-sans font-bold text-xs tracking-button uppercase pb-2 border-b border-ink mb-2">{title}</div>
+    {list.map(clue => (
+      <div key={`${title}-${clue.number}`} className="flex gap-2.5 py-[5px] font-sans text-[15px] leading-[1.45] text-ink-2">
+        <b className="w-[18px] flex-none">{clue.number}</b>
+        <span>{clue.clue} <span className="text-meta">({clue.answer.length})</span></span>
+      </div>
+    ))}
+  </div>
+)
+
 const GISCrossword = ({ data }: { data: CrosswordData }) => {
-  const GRID_SIZE = 10
   const [grid, setGrid] = useState<string[][]>(
     Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(""))
   )
@@ -46,6 +60,11 @@ const GISCrossword = ({ data }: { data: CrosswordData }) => {
   })
 
   const activeCells = new Set(Object.keys(cellMap))
+
+  // Draw only the rows and columns the puzzle uses.
+  const used = [...activeCells].map(k => k.split("-").map(Number))
+  const rows = used.length ? Math.max(...used.map(([r]) => r)) + 1 : GRID_SIZE
+  const cols = used.length ? Math.max(...used.map(([, c]) => c)) + 1 : GRID_SIZE
 
   const handleInput = (r: number, c: number, val: string) => {
     if (revealed) return
@@ -91,94 +110,64 @@ const GISCrossword = ({ data }: { data: CrosswordData }) => {
   const downClues = clues.filter(c => c.direction === "DOWN").sort((a, b) => a.number - b.number)
 
   return (
-    <div className="border border-gray-200 p-3 sm:p-4">
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-        <div className="flex flex-col items-center lg:items-start">
-          <div className="overflow-x-auto max-w-full">
-            <div
-              className="inline-grid border border-gray-400"
-              style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(24px, 28px))` }}
-            >
-              {Array(GRID_SIZE).fill(null).map((_, r) =>
-                Array(GRID_SIZE).fill(null).map((__, c) => {
-                  const key = `${r}-${c}`
-                  const isActive = activeCells.has(key)
-                  const num = numberMap[key]
-                  const isCorrectCell = checked && correct[r][c]
-                  const isWrongCell = checked && isActive && grid[r][c] && !correct[r][c]
+    <div className="grid grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)] gap-6 lg:gap-9">
+      <div>
+        <SectionLabel className="mb-3.5">GIS Crossword</SectionLabel>
+        <div className="overflow-x-auto max-w-full">
+          <div className="inline-grid border-2 border-ink" style={{ gridTemplateColumns: `repeat(${cols}, clamp(28px, 8.2vw, 38px))` }}>
+            {Array(rows).fill(null).map((_, r) =>
+              Array(cols).fill(null).map((__, c) => {
+                const key = `${r}-${c}`
+                const isActive = activeCells.has(key)
+                const num = numberMap[key]
+                const isCorrectCell = checked && correct[r][c]
+                const isWrongCell = checked && isActive && grid[r][c] && !correct[r][c]
+                const borders = `${c < cols - 1 ? "border-r" : ""} ${r < rows - 1 ? "border-b" : ""} border-ink`
 
-                  return (
-                    <div
-                      key={key}
-                      className="relative aspect-square"
-                      style={{ width: "clamp(24px, 8vw, 28px)", height: "clamp(24px, 8vw, 28px)" }}
-                    >
-                      {isActive ? (
-                        <>
-                          {num && (
-                            <span className="absolute top-0 left-0 text-[7px] font-bold text-gray-500 leading-none pl-0.5 pt-0.5 z-10">
-                              {num}
-                            </span>
-                          )}
-                          <input
-                            type="text"
-                            maxLength={1}
-                            value={grid[r][c]}
-                            onChange={e => handleInput(r, c, e.target.value)}
-                            disabled={revealed}
-                            className={`w-full h-full text-center text-xs font-bold border border-gray-300 outline-none uppercase
-                              ${isCorrectCell ? "bg-green-100 text-green-800" :
-                                isWrongCell ? "bg-red-100 text-red-800" :
-                                "bg-white"}
-                              focus:bg-yellow-50 focus:border-[#1a6b3c]`}
-                            style={{ fontSize: 11, paddingTop: num ? 8 : 0 }}
-                          />
-                        </>
-                      ) : (
-                        <div className="w-full h-full bg-[#1a1a1a]" />
-                      )}
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </div>
-          <div className="flex gap-2 mt-3">
-            <button onClick={handleCheck} disabled={revealed}
-              className="text-xs font-sans font-bold tracking-widest uppercase px-3 py-1.5 border border-[#1a1a1a] hover:bg-gray-100 disabled:opacity-40">
-              Check
-            </button>
-            <button onClick={handleReveal} disabled={revealed}
-              className="text-xs font-sans font-bold tracking-widest uppercase px-3 py-1.5 bg-[#1a1a1a] text-white hover:bg-[#1a6b3c] disabled:opacity-40">
-              Reveal
-            </button>
+                return (
+                  <div key={key} className={`relative aspect-square ${borders} ${isActive ? "" : "bg-ink"}`}>
+                    {isActive && (
+                      <>
+                        {num && (
+                          <span className="absolute left-[3px] top-0.5 font-sans font-semibold text-[9px] sm:text-[10px] leading-none z-10 text-ink-3">{num}</span>
+                        )}
+                        <input
+                          type="text"
+                          maxLength={1}
+                          value={grid[r][c]}
+                          onChange={e => handleInput(r, c, e.target.value)}
+                          disabled={revealed}
+                          aria-label={`Row ${r + 1}, column ${c + 1}`}
+                          className={`w-full h-full text-center font-sans font-semibold text-sm sm:text-base uppercase outline-none rounded-none focus:bg-accent-tint ${
+                            isCorrectCell ? "bg-accent-tint text-accent" :
+                            isWrongCell ? "bg-danger-tint text-danger" :
+                            "bg-card text-ink"
+                          }`}
+                          style={{ paddingTop: num ? 6 : 0 }}
+                        />
+                      </>
+                    )}
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
-
-        <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-6">
-          {acrossClues.length > 0 && (
-            <div className="mb-4">
-              <p className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 mb-2">Across</p>
-              {acrossClues.map(clue => (
-                <div key={clue.number} className="flex gap-2 mb-1.5">
-                  <span className="text-xs font-bold text-gray-500 w-4 flex-shrink-0">{clue.number}.</span>
-                  <span className="text-xs font-sans text-gray-700">{clue.clue}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {downClues.length > 0 && (
-            <div>
-              <p className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 mb-2">Down</p>
-              {downClues.map(clue => (
-                <div key={clue.number} className="flex gap-2 mb-1.5">
-                  <span className="text-xs font-bold text-gray-500 w-4 flex-shrink-0">{clue.number}.</span>
-                  <span className="text-xs font-sans text-gray-700">{clue.clue}</span>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="flex gap-2 mt-3">
+          <button type="button" onClick={handleCheck} disabled={revealed}
+            className="min-h-11 sm:min-h-0 font-sans font-semibold text-label leading-none tracking-nav uppercase px-3.5 py-2.5 border border-ink text-ink hover:border-accent hover:text-accent disabled:opacity-40 cursor-pointer">
+            Check
+          </button>
+          <button type="button" onClick={handleReveal} disabled={revealed}
+            className="min-h-11 sm:min-h-0 font-sans font-semibold text-label leading-none tracking-nav uppercase px-3.5 py-2.5 bg-ink text-paper hover:bg-accent disabled:opacity-40 cursor-pointer">
+            Reveal
+          </button>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:pt-[26px]">
+        {acrossClues.length > 0 && <ClueList title="Across" list={acrossClues} />}
+        {downClues.length > 0 && <ClueList title="Down" list={downClues} />}
       </div>
     </div>
   )

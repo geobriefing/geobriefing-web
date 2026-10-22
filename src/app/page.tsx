@@ -1,344 +1,290 @@
 ﻿export const revalidate = 0
 
-import { supabase } from "@/lib/supabase"
 import Link from "next/link"
-import Header from "@/components/Header"
+import { supabase } from "@/lib/supabase"
+import { getSettings } from "@/lib/settings"
+import { dateParts, formatDate, pad2, readTime } from "@/lib/format"
+import Masthead from "@/components/Masthead"
+import Footer from "@/components/Footer"
+import SubscribeForm from "@/components/SubscribeForm"
+import { RegionPill, TypePill } from "@/components/Pills"
+import {
+  DateBlock, EditorNote, FactBox, ImagePlaceholder, JokeCallout, Label, Meta, PrimaryLink,
+  QuoteCallout, SectionLabel, SectionRule, TextLink,
+} from "@/components/Editorial"
+
+interface Story { id: string; title: string; summary: string | null; region: string; topic: string | null; source_name: string | null; source_url: string; is_lead: boolean }
+interface Comic { id: string; title: string; image_url: string | null; comic_series: { title: string } | null }
+interface PastIssue { id: string; issue_number: number; slug: string; headline: string; published_at: string | null }
+
 
 const HomePage = async () => {
-  const { data: issueData } = await supabase
-    .from("issues")
-    .select("*")
-    .eq("status", "published")
-    .order("issue_number", { ascending: false })
-    .limit(1)
-    .single()
-
-  const issue = issueData
-
-  const [
-    { data: storiesData },
-    { data: jokeData },
-    { data: factData },
-    { data: gisStoryData },
-    { data: mapData },
-    { data: comicsData },
-    { data: eventsData },
-    { data: jobsData },
-    { data: allIssuesData },
-    { data: quoteData },
-  ] = await Promise.all([
-    supabase.from("stories").select("id,title,summary,region,topic,source_name,source_url").not("issue_id", "is", null).order("relevance_score", { ascending: false }).limit(4),
-    supabase.from("jokes").select("*").order("created_at", { ascending: false }).limit(1).single(),
-    supabase.from("fun_facts").select("*").order("created_at", { ascending: false }).limit(1).single(),
-    supabase.from("gis_stories").select("*").eq("status", "published").order("created_at", { ascending: false }).limit(1).single(),
-    supabase.from("maps_dont_lie").select("*").eq("status", "published").order("created_at", { ascending: false }).limit(1).single(),
-    supabase.from("comic_strips").select("*, comic_series(title)").order("created_at", { ascending: false }).limit(3),
-    supabase.from("events").select("*").eq("is_active", true).gte("start_date", new Date().toISOString().split("T")[0]).order("start_date", { ascending: true }).limit(3),
-    supabase.from("jobs").select("*").eq("is_active", true).order("posted_at", { ascending: false }).limit(3),
-    supabase.from("issues").select("id,issue_number,slug,headline,published_at").eq("status", "published").order("issue_number", { ascending: false }).limit(4),
-    supabase.from("quotes").select("*").order("created_at", { ascending: false }).limit(1).single(),
+  const [{ data: issue }, settings] = await Promise.all([
+    supabase.from("issues").select("*").eq("status", "published")
+      .order("issue_number", { ascending: false }).limit(1).maybeSingle(),
+    getSettings(),
   ])
 
-  const stories = storiesData || []
-  const events = eventsData || []
-  const jobs = jobsData || []
-  const allIssues = allIssuesData || []
-  const comics = comicsData || []
-  const issueSlug = issue?.slug || ""
-
-  const regionColors: Record<string, string> = {
-    "South Asia": "bg-emerald-100 text-emerald-800",
-    "Middle East": "bg-orange-100 text-orange-800",
-    "Central Asia": "bg-amber-100 text-amber-800",
-    "Global": "bg-gray-100 text-gray-700",
-    "North America": "bg-blue-100 text-blue-800",
-    "Europe": "bg-purple-100 text-purple-800",
-    "Africa": "bg-yellow-100 text-yellow-800",
+  if (!issue) {
+    return (
+      <div className="min-h-screen">
+        <Masthead active="this-week" />
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 py-16 text-center">
+          <h1 className="font-display font-bold text-display">The first issue is on its way</h1>
+          <p className="mt-4 font-serif text-lg text-ink-2">Subscribe and it will arrive on {settings.publishDay} afternoon.</p>
+          <div className="mt-8"><PrimaryLink href="/subscribe">Subscribe</PrimaryLink></div>
+        </main>
+        <Footer />
+      </div>
+    )
   }
 
-  const topLeftLabel = issue
-    ? `Issue #${issue.issue_number} · ${issue.published_at
-        ? new Date(issue.published_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-        : ""}`
-    : ""
+  const issueId = issue.id
+  const today = new Date().toISOString().split("T")[0]
+  const [
+    { data: storiesData }, { data: jokesData }, { data: factsData }, { data: gisStory }, { data: mapItem },
+    { data: comicsData }, { data: eventsData }, { data: pastData }, { data: quote }, { data: gamesData },
+  ] = await Promise.all([
+    supabase.from("stories").select("id,title,summary,region,topic,source_name,source_url,is_lead").eq("issue_id", issueId)
+      .order("is_lead", { ascending: false }).order("relevance_score", { ascending: false }),
+    supabase.from("jokes").select("*").eq("issue_id", issueId).limit(1),
+    supabase.from("fun_facts").select("*").eq("issue_id", issueId).limit(1),
+    supabase.from("gis_stories").select("*").eq("issue_id", issueId).limit(1).maybeSingle(),
+    supabase.from("maps_dont_lie").select("*").eq("issue_id", issueId).limit(1).maybeSingle(),
+    supabase.from("comic_strips").select("id, title, image_url, comic_series(title)").eq("issue_id", issueId),
+    supabase.from("events").select("*").eq("is_active", true).gte("start_date", today).order("start_date", { ascending: true }).limit(4),
+    supabase.from("issues").select("id,issue_number,slug,headline,published_at").eq("status", "published")
+      .lt("issue_number", issue.issue_number).order("issue_number", { ascending: false }).limit(5),
+    supabase.from("quotes").select("*").eq("issue_id", issueId).limit(1).maybeSingle(),
+    supabase.from("games").select("id").eq("issue_id", issueId),
+  ])
+
+  const stories = (storiesData || []) as Story[]
+  const comics = (comicsData || []) as unknown as Comic[]
+  const events = eventsData || []
+  const past = (pastData || []) as PastIssue[]
+  const joke = jokesData?.[0]
+  const fact = factsData?.[0]
+  const games = gamesData || []
+  const href = `/issues/${issue.slug}`
+
+  const minutes = readTime([
+    issue.editor_note, ...stories.map(s => s.summary), gisStory?.content, mapItem?.commentary,
+  ])
+  const regions = new Set(stories.map(s => s.region)).size
+
+  // Table of contents: only sections that have content, numbered in issue order.
+  const toc = [
+    stories.length > 0 && { title: "GIS News", teaser: `${stories.length} ${stories.length === 1 ? "story" : "stories"} from ${regions} ${regions === 1 ? "region" : "regions"}.`, anchor: "news" },
+    gisStory && { title: "GIS Story", teaser: gisStory.title, anchor: "story" },
+    mapItem && { title: "Maps Don't Lie", teaser: mapItem.title, anchor: "maps" },
+    comics.length > 0 && { title: "Comics", teaser: comics[0].title, anchor: "comics" },
+    games.length > 0 && { title: "Games", teaser: `${games.length === 1 ? "A new puzzle" : `${games.length} new puzzles`} this week.`, anchor: "games" },
+    events.length > 0 && { title: "Events", teaser: `${events.length} upcoming, starting with ${events[0].name}.`, anchor: "events" },
+  ].filter(Boolean) as { title: string; teaser: string; anchor: string }[]
+
+  const [lead, ...rest] = stories
+  const nextEvent = events[0]
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
+    <div className="min-h-screen">
+      <Masthead active="this-week" />
 
-      <Header active="this-week" topLeftLabel={topLeftLabel} />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6">
 
-      {issue && (
-        <div className="grid grid-cols-1 md:grid-cols-3 border-b-2 border-[#1a1a1a] mb-0">
-          <div className="md:col-span-2 md:border-r border-gray-200 md:pr-8 py-6 md:py-8">
-            <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">
-              This week&apos;s briefing
-            </p>
-            <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-5">{issue.headline}</h1>
-
-            {quoteData && (
-              <div className="border-l-4 border-gray-200 pl-4 mb-5">
-                <p className="text-sm font-sans italic text-gray-500 leading-relaxed mb-1">
-                  &quot;{quoteData.quote_text}&quot;
-                </p>
-                <p className="text-xs font-sans text-gray-400">
-                  — {quoteData.quote_author}{quoteData.quote_role ? `, ${quoteData.quote_role}` : ""}
-                </p>
+        {/* Lead */}
+        <section className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] pt-6 sm:pt-9 pb-7 sm:pb-10">
+          <div className="md:pr-8">
+            <SectionLabel className="mb-3.5 sm:mb-[18px]">This week&apos;s briefing</SectionLabel>
+            <h1 className="font-display font-bold text-[30px] sm:text-[44px] leading-[1.08] sm:leading-[1.06] tracking-[-0.015em] text-balance">
+              {issue.headline}
+            </h1>
+            <Meta className="mt-2.5 sm:mt-3.5">
+              {formatDate(issue.published_at, "weekday")} · {minutes} min read
+              {stories.length > 0 && ` · ${stories.length} ${stories.length === 1 ? "story" : "stories"}`}
+            </Meta>
+            {quote && <QuoteCallout text={quote.quote_text} author={quote.quote_author} role={quote.quote_role} className="my-5 sm:my-[26px]" />}
+            {issue.editor_note && (
+              <div className={quote ? "" : "mt-5 sm:mt-[26px]"}>
+                <EditorNote note={issue.editor_note} name={settings.editorName} photoUrl={settings.editorPhotoUrl} />
               </div>
             )}
-
-            <p className="text-sm font-sans text-gray-600 leading-relaxed italic mb-6 border-l-4 border-[#1a6b3c] pl-4">
-              {issue.editor_note}
-            </p>
-
-            <Link
-              href={`/issues/${issueSlug}`}
-              className="inline-block bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase px-6 py-3 hover:bg-[#1a6b3c] transition-colors"
-            >
-              Read full issue →
-            </Link>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 mt-[18px] sm:mt-[26px]">
+              <PrimaryLink href={href} className="text-center">Read full issue →</PrimaryLink>
+              <TextLink href="/issues" className="self-start sm:self-auto">Past issues</TextLink>
+            </div>
           </div>
 
-          <div className="md:pl-6 py-6 md:py-8 flex flex-col gap-0 border-t md:border-t-0 border-gray-200 mt-2 md:mt-0">
-            <p className="text-xs font-sans font-bold text-gray-400 tracking-widest uppercase mb-3 mt-2 md:mt-0">
-              In this issue
-            </p>
-            {[
-              { label: "GIS News", desc: `${stories.length > 0 ? "Latest from " + stories[0]?.source_name : "Curated stories"}`, anchor: "news" },
-              { label: "GIS Story", desc: gisStoryData ? (gisStoryData as {title: string}).title.slice(0, 45) + "..." : "Historical & wild stories", anchor: "story" },
-              { label: "Maps Don't Lie", desc: mapData ? (mapData as {title: string}).title.slice(0, 40) + "..." : "Misleading maps exposed", anchor: "map" },
-              { label: "Comics", desc: `${comics.length} strips this week`, anchor: "comics" },
-              { label: "Games", desc: "Satellite Spot · GeoGuesser · Crossword", anchor: "games" },
-              { label: "Events", desc: events.length > 0 ? events[0].name.slice(0, 35) + "..." : "Upcoming GIS events", anchor: "events" },
-              { label: "Jobs", desc: `${jobs.length} GIS opportunities`, anchor: "jobs" },
-            ].map((item, i) => (
-              <Link
-                key={item.label}
-                href={`/issues/${issueSlug}#${item.anchor}`}
-                className={`flex items-start gap-3 py-3 hover:bg-gray-50 -mx-2 px-2 transition-colors ${i < 6 ? "border-b border-gray-100" : ""}`}
-              >
-                <span className="text-xs font-sans font-bold text-[#1a6b3c] w-24 flex-shrink-0 mt-0.5">{item.label}</span>
-                <span className="text-xs font-sans text-gray-500 leading-snug">{item.desc}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 border-b border-gray-200 mb-0">
-        <div className="md:col-span-2 md:border-r border-gray-200 md:pr-8 py-6">
-          <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-4">
-            Top stories
-          </p>
-          <div className="flex flex-col gap-0">
-            {stories.map((story, i) => (
-              <div key={story.id} className={`py-4 ${i < stories.length - 1 ? "border-b border-gray-100" : ""}`}>
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className={`text-xs font-sans font-bold px-2 py-0.5 rounded ${regionColors[story.region] || "bg-gray-100 text-gray-700"}`}>
-                    {story.region}
+          {toc.length > 0 && (
+            <aside className="mt-8 md:mt-0 border-t border-ink pt-3.5 md:border-t-0 md:pt-0 md:border-l md:border-hair md:pl-7">
+              <SectionLabel className="mb-1.5">In this issue</SectionLabel>
+              {toc.map((t, i) => (
+                <Link key={t.anchor} href={`${href}#${t.anchor}`}
+                  className="grid grid-cols-[24px_minmax(0,1fr)] gap-x-2 py-3 border-b border-hair text-ink hover:text-accent">
+                  <span className="font-mono text-[11px] leading-[1.9] text-accent">{pad2(i + 1)}</span>
+                  <span>
+                    <span className="block font-display font-bold text-base sm:text-[17px] leading-[1.25]">{t.title}</span>
+                    <span className="block font-sans text-[15px] sm:text-sm leading-[1.45] text-ink-3 mt-[3px]">{t.teaser}</span>
                   </span>
-                  <span className="text-xs font-sans text-gray-400">{story.topic}</span>
-                </div>
-                <h3 className={`font-bold leading-snug mb-1 ${i === 0 ? "text-base" : "text-sm"}`}>{story.title}</h3>
-                {i === 0 && <p className="text-xs font-sans text-gray-500 leading-relaxed mb-1">{story.summary}</p>}
-                <a href={story.source_url} target="_blank" rel="noopener noreferrer"
-                  className="text-xs font-sans text-gray-400 hover:text-[#1a6b3c]">
-                  {story.source_name} →
-                </a>
-              </div>
-            ))}
-            <div className="pt-3">
-              <Link href={`/issues/${issueSlug}#news`}
-                className="text-xs font-sans font-bold tracking-widest uppercase text-[#1a6b3c] hover:underline">
-                All stories in this issue →
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="md:pl-6 py-6 flex flex-col gap-6 border-t md:border-t-0 border-gray-200 mt-2 md:mt-0">
-          {jokeData && (
-            <div>
-              <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3 mt-4 md:mt-0">GIS Joke</p>
-              <p className="text-sm font-bold mb-1 leading-snug">{jokeData.setup}</p>
-              <p className="text-sm font-sans text-gray-500 italic">{jokeData.punchline}</p>
-            </div>
+                </Link>
+              ))}
+            </aside>
           )}
+        </section>
 
-          <div className="border-t border-gray-100 pt-4" />
-
-          {factData && (
-            <div>
-              <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-2">Did You Know?</p>
-              <p className="text-xs font-sans text-gray-600 leading-relaxed">{factData.fact}</p>
-              <span className="text-xs font-sans text-gray-400 mt-1 block">— {factData.source}</span>
-            </div>
-          )}
-
-          <div className="border-t border-gray-100 pt-4" />
-
-          {events.length > 0 && (
-            <div>
-              <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">Next event</p>
-              <div>
-                <p className="text-xs font-bold leading-snug mb-0.5">{events[0].name}</p>
-                <p className="text-xs font-sans text-gray-400">
-                  {new Date(events[0].start_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                  {events[0].location && events[0].location !== "Online" ? ` · ${events[0].location}` : ""}
-                  {events[0].is_online ? " · Online" : ""}
-                </p>
-                {events[0].is_free && <span className="text-xs font-sans text-green-600 font-bold">Free</span>}
-              </div>
-              <Link href={`/issues/${issueSlug}#events`}
-                className="text-xs font-sans text-gray-400 hover:text-[#1a6b3c] mt-2 block">
-                {events.length} upcoming events →
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 border-b border-gray-200 mb-0">
-
-        {gisStoryData && (
-          <div className="md:border-r border-gray-200 md:pr-6 py-6 border-t md:border-t-0">
-            <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3 mt-2 md:mt-0">GIS Story</p>
-            <span className={`text-xs font-sans font-bold px-2 py-0.5 rounded mb-2 inline-block ${
-              (gisStoryData as {story_type: string}).story_type === "history" ? "bg-amber-100 text-amber-700" :
-              (gisStoryData as {story_type: string}).story_type === "wild" ? "bg-red-100 text-red-700" :
-              "bg-purple-100 text-purple-700"
-            }`}>
-              {(gisStoryData as {story_type: string}).story_type}
-            </span>
-            <h3 className="text-sm font-bold leading-snug mb-2 mt-1">{(gisStoryData as {title: string}).title}</h3>
-            <p className="text-xs font-sans text-gray-500 leading-relaxed line-clamp-4">
-              {(gisStoryData as {content: string}).content}
-            </p>
-            <Link href={`/issues/${issueSlug}#story`}
-              className="text-xs font-sans text-[#1a6b3c] hover:underline mt-2 block">
-              Read story →
-            </Link>
-          </div>
-        )}
-
-        {mapData && (
-          <div className="md:border-r border-gray-200 md:px-6 py-6 border-t md:border-t-0">
-            <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3">Maps Don&apos;t Lie</p>
-            {(mapData as {image_url: string | null}).image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={(mapData as {image_url: string}).image_url} alt={(mapData as {title: string}).title}
-                className="w-full h-28 object-cover border border-gray-200 mb-2" />
-            ) : (
-              <div className="w-full h-28 bg-gray-100 border border-dashed border-gray-200 mb-2 flex items-center justify-center">
-                <span className="text-xs font-sans text-gray-400">Map image pending</span>
-              </div>
-            )}
-            <span className="text-xs font-sans font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 mb-2 inline-block">
-              {(mapData as {map_type: string}).map_type}
-            </span>
-            <h3 className="text-sm font-bold leading-snug mb-1">{(mapData as {title: string}).title}</h3>
-            <p className="text-xs font-sans text-gray-500 leading-relaxed line-clamp-3">
-              {(mapData as {commentary: string}).commentary}
-            </p>
-            <Link href={`/issues/${issueSlug}#map`}
-              className="text-xs font-sans text-[#1a6b3c] hover:underline mt-2 block">
-              Read commentary →
-            </Link>
-          </div>
-        )}
-
-        <div className="md:pl-6 py-6 border-t md:border-t-0">
-          <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-3 mt-2 md:mt-0">Comics</p>
-          <div className="flex flex-col gap-3 mb-3">
-            {comics.map((comic: {id: string, title: string, image_url: string | null, comic_series: {title: string} | null}) => (
-              <div key={comic.id} className="flex gap-2 items-start">
-                {comic.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={comic.image_url} alt={comic.title}
-                    className="w-14 h-10 object-cover border border-gray-200 flex-shrink-0" />
-                ) : (
-                  <div className="w-14 h-10 bg-gray-100 border border-gray-200 flex-shrink-0" />
-                )}
-                <div>
-                  <p className="text-xs text-gray-400">{comic.comic_series?.title}</p>
-                  <p className="text-xs font-bold leading-snug">{comic.title}</p>
+        {/* Top stories + sidebar */}
+        {stories.length > 0 && (
+          <>
+            <SectionRule />
+            <section className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] pt-6 sm:pt-8 pb-8 sm:pb-10">
+              <div className="md:pr-8">
+                <SectionLabel>Top stories</SectionLabel>
+                <div className={`grid grid-cols-1 ${rest.length > 0 ? "sm:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]" : ""}`}>
+                  <article className={rest.length > 0 ? "sm:pr-6 sm:border-r sm:border-hair" : ""}>
+                    <div className="flex flex-wrap gap-2 items-center mb-2.5">
+                      <RegionPill region={lead.region} />
+                      {lead.topic && <Meta className="text-[11px]">{lead.topic}</Meta>}
+                    </div>
+                    <h2 className="font-display font-bold text-[22px] sm:text-[25px] leading-[1.18] tracking-[-0.005em] text-balance">
+                      <Link href={`${href}#news`} className="text-ink hover:text-accent">{lead.title}</Link>
+                    </h2>
+                    {lead.summary && <p className="mt-2.5 font-sans text-[15px] sm:text-base leading-[1.55] text-ink-3 text-pretty">{lead.summary}</p>}
+                    {lead.source_name && <Meta className="mt-3 text-[11.5px] tracking-[.1em]">Source: {lead.source_name}</Meta>}
+                  </article>
+                  {rest.length > 0 && (
+                    <div className="mt-6 sm:mt-0 sm:pl-6">
+                      {rest.slice(0, 3).map((s, i, a) => (
+                        <article key={s.id} className={`pb-4 mb-4 ${i < a.length - 1 ? "border-b border-hair" : ""} ${i === 0 ? "border-t border-hair pt-4 sm:border-t-0 sm:pt-0" : ""}`}>
+                          <div className="flex flex-wrap gap-2 items-center mb-2">
+                            <RegionPill region={s.region} />
+                            {s.topic && <Meta className="text-[11px]">{s.topic}</Meta>}
+                          </div>
+                          <h3 className="font-display font-semibold text-lg sm:text-h3 leading-[1.28] text-pretty">
+                            <Link href={`${href}#news`} className="text-ink hover:text-accent">{s.title}</Link>
+                          </h3>
+                          {s.summary && <p className="mt-1.5 font-sans text-[15px] sm:text-[14.5px] leading-[1.5] text-ink-3 line-clamp-2">{s.summary}</p>}
+                        </article>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-          <Link href={`/issues/${issueSlug}#comics`}
-            className="text-xs font-sans text-[#1a6b3c] hover:underline">
-            All 5 strips →
-          </Link>
 
-          <div className="border-t border-gray-100 pt-4 mt-4">
-            <p className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase mb-2">GIS Jobs</p>
-            {jobs.slice(0, 2).map(job => (
-              <div key={job.id} className="mb-2">
-                <a href={job.apply_url} target="_blank" rel="noopener noreferrer"
-                  className="text-xs font-bold hover:text-[#1a6b3c] leading-snug block">
-                  {job.title.slice(0, 45)}{job.title.length > 45 ? "..." : ""}
-                </a>
-                <span className={`text-xs font-sans px-1.5 py-0.5 rounded font-bold ${
-                  job.bucket === "pakistan" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
-                }`}>
-                  {job.bucket === "pakistan" ? "Pakistan" : "International"}
-                </span>
-              </div>
-            ))}
-            <Link href="/jobs" className="text-xs font-sans text-gray-400 hover:text-[#1a6b3c]">
-              All jobs →
-            </Link>
-          </div>
-        </div>
-      </div>
+              {(joke || fact || nextEvent) && (
+                <aside className="mt-6 md:mt-0 md:border-l md:border-hair md:pl-7 flex flex-col gap-7">
+                  {joke && <JokeCallout setup={joke.setup} punchline={joke.punchline} />}
+                  {fact && <FactBox fact={fact.fact} source={fact.source} />}
+                  {nextEvent && (
+                    <div>
+                      <SectionLabel className="mb-3.5">Next event</SectionLabel>
+                      <div className="flex gap-3.5">
+                        <DateBlock {...dateParts(nextEvent.start_date)} />
+                        <div>
+                          <a href={nextEvent.url} target="_blank" rel="noopener noreferrer"
+                            className="font-display font-semibold text-[17px] leading-[1.25] text-ink hover:text-accent">{nextEvent.name}</a>
+                          <div className="font-sans text-[15px] sm:text-[13.5px] leading-[1.4] text-ink-3 mt-1 mb-2">
+                            {[nextEvent.location, nextEvent.is_online && nextEvent.location !== "Online" ? "Online" : null].filter(Boolean).join(" · ")}
+                          </div>
+                          <TypePill kind="event" value={nextEvent.event_type} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </aside>
+              )}
+            </section>
+          </>
+        )}
 
-      <div className="border-b border-gray-200 py-6">
-        <p className="text-xs font-sans font-bold text-gray-400 tracking-widest uppercase mb-3">Past issues</p>
-        <div className="flex flex-col gap-0">
-          {allIssues.map((i, idx) => (
-            <div key={i.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 py-2.5 ${idx < allIssues.length - 1 ? "border-b border-gray-100" : ""}`}>
-              <div className="flex items-center gap-4">
-                <span className="text-xs font-sans text-gray-400 w-16 flex-shrink-0">Issue #{i.issue_number}</span>
-                <span className="text-sm font-bold leading-snug">{i.headline}</span>
-              </div>
-              <Link href={`/issues/${i.slug}`}
-                className="text-xs font-sans text-[#1a6b3c] hover:underline flex-shrink-0 sm:ml-4">
-                Read
-              </Link>
-            </div>
-          ))}
-        </div>
-      </div>
+        {/* Story · Maps · Comics */}
+        {(gisStory || mapItem || comics.length > 0) && (
+          <>
+            <SectionRule />
+            <section className="grid grid-cols-1 md:grid-cols-3 pt-6 sm:pt-8 pb-8 sm:pb-10 gap-y-8">
+              {gisStory && (
+                <div className="md:pr-6">
+                  <SectionLabel className="mb-4">GIS Story</SectionLabel>
+                  <h3 className="font-display font-bold text-[22px] sm:text-2xl leading-[1.18] text-balance">{gisStory.title}</h3>
+                  <p className="mt-2.5 font-serif text-base leading-[1.6] text-ink-2 line-clamp-5 text-pretty">{gisStory.content}</p>
+                  <Meta className="text-[11.5px] tracking-[.1em] mt-3 mb-4">{readTime([gisStory.content])} min read</Meta>
+                  <TextLink href={`${href}#story`}>Read the story →</TextLink>
+                </div>
+              )}
+              {mapItem && (
+                <div className={`${gisStory ? "md:px-6 md:border-l md:border-hair" : "md:pr-6"}`}>
+                  <SectionLabel className="mb-4">Maps Don&apos;t Lie</SectionLabel>
+                  <Link href={`${href}#maps`} className="block text-ink hover:text-accent">
+                    {mapItem.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img loading="lazy" src={mapItem.image_url} alt={mapItem.title} className="w-full aspect-[4/3] object-cover border border-hair" />
+                    ) : (
+                      <ImagePlaceholder label="Map image pending" className="aspect-[4/3]" />
+                    )}
+                    <div className="mt-3 mb-2"><TypePill kind="map" value={mapItem.map_type} /></div>
+                    <h3 className="font-display font-semibold text-lg sm:text-h3 leading-[1.28]">{mapItem.title}</h3>
+                  </Link>
+                  <p className="mt-1.5 font-sans text-[15px] sm:text-[14.5px] leading-[1.5] text-ink-3 line-clamp-3">{mapItem.commentary}</p>
+                </div>
+              )}
+              {comics.length > 0 && (
+                <div className={`${gisStory || mapItem ? "md:pl-6 md:border-l md:border-hair" : ""}`}>
+                  <SectionLabel className="mb-4">Comics</SectionLabel>
+                  <Link href={`${href}#comics`} className="grid grid-cols-2 gap-2">
+                    {comics.slice(0, 2).map(c => c.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img loading="lazy" key={c.id} src={c.image_url} alt={c.title} className="w-full aspect-square object-cover border border-hair" />
+                    ) : (
+                      <ImagePlaceholder key={c.id} label={c.title} className="aspect-square" />
+                    ))}
+                  </Link>
+                  <div className="font-sans text-[13.5px] leading-[1.4] text-ink-3 mt-2">{comics[0].title}</div>
+                  <TextLink href={`${href}#comics`} className="mt-3">
+                    {comics.length === 1 ? "Read the strip →" : `All ${comics.length} strips →`}
+                  </TextLink>
+                </div>
+              )}
+            </section>
+          </>
+        )}
 
-      <div className="py-8 border-b border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-center">
+        {/* Past issues */}
+        {past.length > 0 && (
+          <>
+            <SectionRule />
+            <section className="pt-6 sm:pt-8 pb-8 sm:pb-12">
+              <SectionLabel className="mb-1.5" aside={
+                <Link href="/issues" className="font-sans font-semibold text-label leading-none tracking-nav uppercase text-accent">All issues →</Link>
+              }>Past issues</SectionLabel>
+              {past.map(p => (
+                <Link key={p.id} href={`/issues/${p.slug}`}
+                  className="grid grid-cols-1 sm:grid-cols-[64px_minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 items-baseline py-3 sm:py-3.5 border-b border-hair text-ink hover:text-accent">
+                  <span className="font-mono text-[11px] sm:text-[13px] text-meta">
+                    #{p.issue_number}<span className="sm:hidden"> · {formatDate(p.published_at, "short")}</span>
+                  </span>
+                  <span className="font-display font-semibold text-[16.5px] sm:text-h3 leading-[1.3]">{p.headline}</span>
+                  <span className="hidden sm:block font-sans font-medium text-caption tracking-meta uppercase text-meta whitespace-nowrap">
+                    {formatDate(p.published_at, "short")}
+                  </span>
+                </Link>
+              ))}
+            </section>
+          </>
+        )}
+
+        {/* Subscribe band */}
+        <section className="bg-[#1A1A1A] text-[#FAFAF7] -mx-4 sm:mx-0 px-4 py-7 sm:p-10 mb-7 sm:mb-12 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Free. Every Monday.</h2>
-            <p className="text-sm font-sans text-gray-600 leading-relaxed">
-              GIS news, stories, games, comics, maps, jobs and events —
-              curated for the global geospatial community, with a focus on
-              South Asia, the Middle East, and Central Asia.
+            <Label className="block mb-3 text-[#7FCF9F]!">Subscribe</Label>
+            <div className="font-display font-bold text-[30px] sm:text-[40px] leading-[1.05] tracking-[-0.01em]">Free. Every {settings.publishDay}.</div>
+            <p className="mt-2 sm:mt-3 font-sans text-[15px] sm:text-base leading-[1.55] text-[#CFCEC6]">
+              One email a week: the news, a story, a map, a comic and a game. No ads. Unsubscribe in one click.
             </p>
           </div>
-          <div className="flex flex-col gap-3">
-            <input type="email" placeholder="your@email.com"
-              className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a6b3c]" />
-            <button className="w-full bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase py-3 hover:bg-[#1a6b3c] transition-colors">
-              Subscribe free
-            </button>
-            <p className="text-xs font-sans text-gray-400 text-center">No spam. No ads. Unsubscribe any time.</p>
-          </div>
-        </div>
-      </div>
+          <SubscribeForm variant="band" publishDay={settings.publishDay} />
+        </section>
+      </main>
 
-      <footer className="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-center">
-        <span className="text-xs font-sans text-gray-400">2026 GeoBriefing · Covering the whole map</span>
-        <div className="flex gap-4">
-          <Link href="/about" className="text-xs font-sans text-gray-400 hover:text-[#1a6b3c]">About</Link>
-          <Link href="/subscribe" className="text-xs font-sans text-gray-400 hover:text-[#1a6b3c]">Subscribe</Link>
-        </div>
-      </footer>
-
+      <Footer />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 ﻿"use client"
 import { useState } from "react"
+import { SectionLabel } from "@/components/Editorial"
 
 interface SatelliteSpotData {
   image_url: string
@@ -11,66 +12,72 @@ interface SatelliteSpotData {
   lon: number
 }
 
-const SatelliteSpot = ({ data }: { data: SatelliteSpotData }) => {
-  const [selected, setSelected] = useState<string | null>(null)
-  const [revealed, setRevealed] = useState(false)
+const KEYS = "ABCDEFGH"
 
-  const handleGuess = (option: string) => {
-    if (revealed) return
-    setSelected(option)
-    setRevealed(true)
+const SatelliteSpot = ({ data, publishDay }: { data: SatelliteSpotData; publishDay: string }) => {
+  const [picked, setPicked] = useState<string[]>([])
+  const solved = picked.includes(data.answer)
+  // Stable order on server and client; the answer's position is not meaningful.
+  const options = [...data.options].sort((a, b) => a.localeCompare(b))
+  const last = picked[picked.length - 1]
+
+  const pick = (option: string) => {
+    if (solved || picked.includes(option)) return
+    setPicked([...picked, option])
   }
 
-  // eslint-disable-next-line react-hooks/purity
-  const shuffled = [...data.options].sort(() => Math.random() - 0.5)
-
   return (
-    <div className="border border-gray-200">
-      <div className="w-full h-56 sm:h-72 bg-gray-100 overflow-hidden">
-        {data.use_embed ? (
-          <iframe
-            src={data.image_url}
-            className="w-full h-full border-0"
-            title="Satellite view"
-          />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+      <div className="aspect-square bg-paper-2 border border-hair overflow-hidden">
+        {!data.image_url ? (
+          <div className="w-full h-full hatch flex items-end p-3">
+            <span className="font-mono text-[11px] text-meta">Satellite image pending</span>
+          </div>
+        ) : data.use_embed ? (
+          <iframe src={data.image_url} className="w-full h-full border-0" title="Satellite view" />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={data.image_url}
-            alt="Satellite view - where is this?"
-            className="w-full h-full object-cover"
-          />
+          <img loading="lazy" src={data.image_url} alt="Satellite view of the place to identify" className="w-full h-full object-cover" />
         )}
       </div>
-      <div className="p-3 sm:p-4">
-        <p className="text-xs font-sans font-bold text-gray-500 uppercase tracking-widest mb-3">
-          Where on Earth is this?
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-          {shuffled.map((option) => {
-            const isCorrect = option === data.answer
-            const isSelected = option === selected
-            let bg = "bg-white border-gray-300 hover:border-[#1a6b3c]"
-            if (revealed && isCorrect) bg = "bg-green-50 border-green-500"
-            else if (revealed && isSelected && !isCorrect) bg = "bg-red-50 border-red-400"
+      <div>
+        <SectionLabel className="mb-3">Satellite Spot</SectionLabel>
+        <h3 className="font-display font-semibold text-xl sm:text-[22px] leading-[1.25] mb-4">Where on Earth is this?</h3>
+        <div className="flex flex-col gap-2">
+          {options.map((option, i) => {
+            const chosen = picked.includes(option)
+            const right = chosen && option === data.answer
+            const wrong = chosen && option !== data.answer
             return (
               <button
                 key={option}
-                onClick={() => handleGuess(option)}
-                disabled={revealed}
-                className={`border px-3 py-2 text-xs font-sans text-left transition-colors ${bg} ${!revealed ? "cursor-pointer" : "cursor-default"}`}
+                type="button"
+                onClick={() => pick(option)}
+                disabled={solved}
+                className={`flex items-center gap-3 text-left px-3.5 py-3 border font-sans text-base text-ink transition-colors ${
+                  right ? "bg-accent-tint border-accent" :
+                  wrong ? "bg-danger-tint border-danger" :
+                  "bg-card border-hair-2 hover:border-ink"
+                } ${solved ? "cursor-default" : "cursor-pointer"}`}
               >
-                {option}
+                <span className={`flex-none w-6 h-6 flex items-center justify-center border font-mono font-semibold text-xs ${
+                  right ? "bg-accent border-accent text-paper" :
+                  wrong ? "bg-danger border-danger text-paper" :
+                  "bg-paper border-hair-2"
+                }`}>{KEYS[i]}</span>
+                <span className="flex-1">{option}</span>
+                {right && <span className="font-sans font-semibold text-label tracking-meta uppercase text-accent">Correct</span>}
+                {wrong && <span className="font-sans font-semibold text-label tracking-meta uppercase text-danger">Not this one</span>}
               </button>
             )
           })}
         </div>
-        {revealed && (
-          <div className={`px-4 py-3 text-sm font-sans border ${selected === data.answer ? "border-green-300 bg-green-50 text-green-800" : "border-red-300 bg-red-50 text-red-800"}`}>
-            {selected === data.answer ? "Correct!" : `The answer was ${data.answer}.`}
-            <p className="text-xs text-gray-600 mt-1 font-normal">{data.fact}</p>
-          </div>
-        )}
+        <p className="mt-3 font-sans text-[15px] sm:text-sm leading-[1.5] text-ink-3 min-h-[21px]" aria-live="polite">
+          {solved ? data.fact : last ? "Not quite. Try another." : ""}
+        </p>
+        <div className="font-sans font-medium text-caption tracking-[.1em] uppercase text-meta mt-1">
+          Full answer in next {publishDay}&apos;s issue
+        </div>
       </div>
     </div>
   )

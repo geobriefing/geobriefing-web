@@ -1,6 +1,8 @@
 ﻿"use client"
 import { useState, useEffect } from "react"
 import AdminHeader from "@/components/AdminHeader"
+import { TypePill } from "@/components/Pills"
+import { AdminLoading, AdminTitle, BigBtn, Btn, Field, Notice, StatusText, inputCls } from "@/components/AdminUI"
 import { supabase } from "@/lib/supabase"
 import { useAdminAuth } from "@/lib/useAdminAuth"
 
@@ -20,6 +22,15 @@ interface MapDraft {
   status: string
   issue_id: string | null
 }
+
+const MAP_TYPES = ["misleading", "surprising", "manipulative", "beautiful", "historical"]
+
+const ImagePicker = ({ file, onChange }: { file: File | null; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
+  <label className="block border border-dashed border-[#B9B8B0] bg-card px-5 py-5 text-center font-sans text-sm text-ink-3 cursor-pointer hover:border-accent">
+    {file ? file.name : "Choose a map image (PNG, JPG or WebP)"}
+    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onChange} className="sr-only" />
+  </label>
+)
 
 const MapsAdminPage = () => {
   const { ready, logout } = useAdminAuth()
@@ -46,22 +57,24 @@ const MapsAdminPage = () => {
     setDrafts(draftsData || [])
   }
 
+  const readPreview = (file: File, set: (s: string) => void) => {
+    const reader = new FileReader()
+    reader.onload = () => set(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
   const handleDraftImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setImageFile(file)
-    const reader = new FileReader()
-    reader.onload = () => setImagePreview(reader.result as string)
-    reader.readAsDataURL(file)
+    readPreview(file, setImagePreview)
   }
 
   const handleNewImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setNewImageFile(file)
-    const reader = new FileReader()
-    reader.onload = () => setNewImagePreview(reader.result as string)
-    reader.readAsDataURL(file)
+    readPreview(file, setNewImagePreview)
   }
 
   const uploadImage = async (file: File, prefix: string) => {
@@ -87,7 +100,7 @@ const MapsAdminPage = () => {
         status: "approved",
       }).eq("id", editingDraft.id)
       if (error) throw error
-      setMessage("Map approved!")
+      setMessage("Map approved.")
       setEditingDraft(null)
       setImageFile(null)
       setImagePreview("")
@@ -101,7 +114,7 @@ const MapsAdminPage = () => {
 
   const publishNewMap = async () => {
     if (!newMap.title || !newMap.commentary || !newMap.issue_id) {
-      setMessage("Title, commentary and issue are required.")
+      setMessage("Please add a title, commentary and issue.")
       return
     }
     setUploading(true)
@@ -111,7 +124,7 @@ const MapsAdminPage = () => {
       if (newImageFile) imageUrl = await uploadImage(newImageFile, "map-new")
       const { error } = await supabase.from("maps_dont_lie").insert({ ...newMap, image_url: imageUrl, status: "approved" })
       if (error) throw error
-      setMessage("Map approved!")
+      setMessage("Map approved.")
       setNewMap({ title: "", commentary: "", map_type: "misleading", source_url: "", issue_id: "" })
       setNewImageFile(null)
       setNewImagePreview("")
@@ -130,151 +143,124 @@ const MapsAdminPage = () => {
     loadData()
   }
 
-  if (!ready) return (
-    <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
-      <span className="text-xs font-sans text-gray-400">Loading...</span>
-    </div>
-  )
+  if (!ready) return <AdminLoading />
+
+  const issueNumber = (id: string | null) => issues.find(i => i.id === id)?.issue_number
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
+    <div className="min-h-screen">
+      <AdminHeader active="maps" onLogout={logout} />
 
-      <AdminHeader active="maps" topLeftLabel="Admin · Maps Don't Lie" onLogout={logout} />
+      <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-12">
+        <div className="max-w-[820px]">
+          <AdminTitle title="Maps Don't Lie" action={
+            <Btn variant="primary" onClick={() => setShowNewForm(!showNewForm)}>{showNewForm ? "Close" : "+ New map"}</Btn>
+          } />
+          <Notice message={message} />
 
-      {message && (
-        <div className={`mb-6 px-4 py-3 text-sm font-sans border ${
-          message.startsWith("Error") ? "border-red-300 bg-red-50 text-red-700" : "border-green-300 bg-green-50 text-green-700"
-        }`}>
-          {message}
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
-        <h2 className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500">
-          All Maps ({drafts.length})
-        </h2>
-        <button onClick={() => setShowNewForm(!showNewForm)}
-          className="text-xs font-sans font-bold tracking-widest uppercase text-[#1a6b3c] hover:underline w-fit">
-          + Add new map
-        </button>
-      </div>
-
-      {showNewForm && (
-        <div className="border border-[#1a6b3c] p-5 mb-8 flex flex-col gap-4">
-          <h3 className="text-sm font-bold">New Map Entry</h3>
-          <select value={newMap.issue_id} onChange={e => setNewMap({ ...newMap, issue_id: e.target.value })}
-            className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a] bg-white">
-            <option value="">Select issue *</option>
-            {issues.map(i => <option key={i.id} value={i.id}>Issue #{i.issue_number}</option>)}
-          </select>
-          <input type="text" value={newMap.title} onChange={e => setNewMap({ ...newMap, title: e.target.value })}
-            placeholder="Map title *"
-            className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a]" />
-          <select value={newMap.map_type} onChange={e => setNewMap({ ...newMap, map_type: e.target.value })}
-            className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a] bg-white">
-            <option value="misleading">Misleading</option>
-            <option value="surprising">Surprising</option>
-            <option value="manipulative">Manipulative</option>
-            <option value="historical">Historical</option>
-          </select>
-          <textarea value={newMap.commentary} onChange={e => setNewMap({ ...newMap, commentary: e.target.value })}
-            placeholder="Your editorial commentary *" rows={5}
-            className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a] resize-none" />
-          <input type="url" value={newMap.source_url} onChange={e => setNewMap({ ...newMap, source_url: e.target.value })}
-            placeholder="Source URL"
-            className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a]" />
-          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleNewImageChange}
-            className="w-full text-sm font-sans border border-gray-300 px-3 py-2 cursor-pointer" />
-          {newImagePreview && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={newImagePreview} alt="Preview" className="w-full border border-gray-200" />
-          )}
-          <button onClick={publishNewMap} disabled={uploading}
-            className="bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase py-2 hover:bg-[#1a6b3c] transition-colors disabled:opacity-50">
-            {uploading ? "Saving..." : "Approve Map"}
-          </button>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-4">
-        {drafts.map(draft => (
-          <div key={draft.id} className={`border p-4 ${draft.status === "approved" ? "border-gray-200" : "border-amber-200 bg-amber-50"}`}>
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-xs font-sans font-bold px-2 py-0.5 rounded ${
-                  draft.status === "approved" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                }`}>
-                  {draft.status}
-                </span>
-                <span className="text-xs font-sans text-gray-400">{draft.map_type}</span>
+          {showNewForm && (
+            <div className="bg-card border border-hair border-l-[3px] border-l-accent px-5 py-5 mt-5 flex flex-col gap-4">
+              <div className="font-display font-bold text-h3">New map</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Issue *">
+                  <select value={newMap.issue_id} onChange={e => setNewMap({ ...newMap, issue_id: e.target.value })} className={inputCls}>
+                    <option value="">Select issue…</option>
+                    {issues.map(i => <option key={i.id} value={i.id}>Issue #{i.issue_number}</option>)}
+                  </select>
+                </Field>
+                <Field label="Type">
+                  <select value={newMap.map_type} onChange={e => setNewMap({ ...newMap, map_type: e.target.value })} className={`${inputCls} capitalize`}>
+                    {MAP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </Field>
               </div>
-              <div className="flex gap-3">
-                {draft.status === "draft" && (
-                  <button onClick={() => { setEditingDraft({ ...draft }); setImagePreview(""); setImageFile(null) }}
-                    className="text-xs font-sans text-[#1a6b3c] font-bold hover:underline">
-                    Edit + Approve
-                  </button>
+              <Field label="Title *">
+                <input type="text" value={newMap.title} onChange={e => setNewMap({ ...newMap, title: e.target.value })} className={inputCls} />
+              </Field>
+              <Field label="Commentary *">
+                <textarea value={newMap.commentary} onChange={e => setNewMap({ ...newMap, commentary: e.target.value })} rows={5} className={`${inputCls} resize-y`} />
+              </Field>
+              <Field label="Source URL">
+                <input type="url" value={newMap.source_url} onChange={e => setNewMap({ ...newMap, source_url: e.target.value })} className={inputCls} />
+              </Field>
+              <ImagePicker file={newImageFile} onChange={handleNewImageChange} />
+              {newImagePreview && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img loading="lazy" src={newImagePreview} alt="Preview" className="w-full border border-hair" />
+              )}
+              <BigBtn onClick={publishNewMap} disabled={uploading} className="self-start">
+                {uploading ? "Saving…" : "Approve map"}
+              </BigBtn>
+            </div>
+          )}
+
+          {drafts.length === 0 && !showNewForm && (
+            <div className="mt-5 border border-dashed border-[#B9B8B0] bg-card px-6 py-10 text-center font-sans text-[15px] text-ink-3">
+              No maps yet. The weekly pipeline suggests one, or add your own.
+            </div>
+          )}
+
+          {drafts.map(draft => (
+            <div key={draft.id} className="grid grid-cols-[72px_minmax(0,1fr)] sm:grid-cols-[96px_minmax(0,1fr)_auto] gap-x-3.5 gap-y-3 items-start py-3.5 border-b border-hair">
+              {draft.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img loading="lazy" src={draft.image_url} alt="" className="w-full aspect-[4/3] object-cover border border-hair" />
+              ) : <div className="aspect-[4/3] hatch border border-hair" />}
+              <div className="min-w-0">
+                <div className="font-display font-semibold text-base leading-[1.3]">{draft.title}</div>
+                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                  <TypePill kind="map" value={draft.map_type} />
+                  <StatusText status={draft.status} />
+                  <span className="font-sans text-xs text-meta">{issueNumber(draft.issue_id) ? `#${issueNumber(draft.issue_id)}` : "Unused"}</span>
+                </div>
+                <p className="font-sans text-[13.5px] leading-[1.5] text-ink-3 mt-1.5 line-clamp-2">{draft.commentary}</p>
+              </div>
+              <div className="col-start-2 sm:col-start-auto flex gap-2">
+                {draft.status !== "approved" && (
+                  <Btn variant="approve" onClick={() => { setEditingDraft({ ...draft }); setImagePreview(""); setImageFile(null) }}>Edit + approve</Btn>
                 )}
-                <button onClick={() => deleteMap(draft.id)} className="text-xs font-sans text-red-400 hover:underline">Delete</button>
+                <Btn variant="danger" onClick={() => deleteMap(draft.id)}>Delete</Btn>
               </div>
             </div>
-            <h3 className="font-bold mb-1 text-sm">{draft.title}</h3>
-            <p className="text-xs font-sans text-gray-500 leading-relaxed mb-2 line-clamp-2">{draft.commentary}</p>
-            {draft.source_url && (
-              <a href={draft.source_url} target="_blank" rel="noopener noreferrer"
-                className="text-xs font-sans text-[#1a6b3c] hover:underline break-all">
-                {draft.source_url.slice(0, 60)}...
-              </a>
-            )}
-            {draft.image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={draft.image_url} alt={draft.title} className="w-full max-h-40 object-cover border border-gray-200 mt-2" />
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {editingDraft && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 font-serif">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold">Edit + Approve Map</h2>
-              <button onClick={() => setEditingDraft(null)} className="text-gray-400 hover:text-[#1a1a1a] text-xl font-bold">×</button>
+        <div className="fixed inset-0 bg-[#1A1A1A]/60 flex items-center justify-center z-50 p-2 sm:p-4" role="dialog" aria-modal="true">
+          <div className="bg-paper border-t-[3px] border-ink max-w-2xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-7">
+            <div className="flex items-center justify-between pb-3.5 mb-5 border-b-2 border-ink">
+              <h2 className="font-display font-bold text-[22px]">Edit and approve map</h2>
+              <button type="button" onClick={() => setEditingDraft(null)} aria-label="Close" className="font-sans text-2xl leading-none text-meta hover:text-ink cursor-pointer">×</button>
             </div>
             <div className="flex flex-col gap-4">
-              <input type="text" value={editingDraft.title} onChange={e => setEditingDraft({ ...editingDraft, title: e.target.value })}
-                className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a]" placeholder="Title" />
-              <select value={editingDraft.map_type} onChange={e => setEditingDraft({ ...editingDraft, map_type: e.target.value })}
-                className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none bg-white">
-                <option value="misleading">Misleading</option>
-                <option value="surprising">Surprising</option>
-                <option value="manipulative">Manipulative</option>
-                <option value="historical">Historical</option>
-              </select>
-              <textarea value={editingDraft.commentary} onChange={e => setEditingDraft({ ...editingDraft, commentary: e.target.value })}
-                rows={7} className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none resize-none leading-relaxed"
-                placeholder="Editorial commentary..." />
-              <input type="url" value={editingDraft.source_url || ""} onChange={e => setEditingDraft({ ...editingDraft, source_url: e.target.value })}
-                className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none" placeholder="Source URL" />
+              <Field label="Title">
+                <input type="text" value={editingDraft.title} onChange={e => setEditingDraft({ ...editingDraft, title: e.target.value })} className={inputCls} />
+              </Field>
+              <Field label="Type">
+                <select value={editingDraft.map_type} onChange={e => setEditingDraft({ ...editingDraft, map_type: e.target.value })} className={`${inputCls} capitalize`}>
+                  {MAP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+              <Field label="Commentary">
+                <textarea value={editingDraft.commentary} onChange={e => setEditingDraft({ ...editingDraft, commentary: e.target.value })} rows={7} className={`${inputCls} resize-y`} />
+              </Field>
+              <Field label="Source URL">
+                <input type="url" value={editingDraft.source_url || ""} onChange={e => setEditingDraft({ ...editingDraft, source_url: e.target.value })} className={inputCls} />
+              </Field>
               {editingDraft.source_url && (
-                <div className="text-xs font-sans bg-gray-50 p-3 border border-gray-200 break-all">
-                  Find the map at: <a href={editingDraft.source_url} target="_blank" rel="noopener noreferrer"
-                    className="text-[#1a6b3c] hover:underline">{editingDraft.source_url}</a>
+                <div className="font-sans text-[13px] bg-paper-2 px-3 py-2.5 break-all text-ink-3">
+                  Find the map at: <a href={editingDraft.source_url} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-deep">{editingDraft.source_url}</a>
                 </div>
               )}
-              <div>
-                <label className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 block mb-2">Upload Map Image</label>
-                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleDraftImageChange}
-                  className="w-full text-sm font-sans border border-gray-300 px-3 py-2 cursor-pointer" />
-                {imagePreview && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={imagePreview} alt="Preview" className="mt-3 w-full border border-gray-200" />
-                )}
-              </div>
-              <button onClick={publishDraft} disabled={uploading}
-                className="bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase py-3 hover:bg-[#1a6b3c] transition-colors disabled:opacity-50">
-                {uploading ? "Saving..." : "Approve Map"}
-              </button>
+              <ImagePicker file={imageFile} onChange={handleDraftImageChange} />
+              {imagePreview && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img loading="lazy" src={imagePreview} alt="Preview" className="w-full border border-hair" />
+              )}
+              <BigBtn onClick={publishDraft} disabled={uploading} className="self-start">
+                {uploading ? "Saving…" : "Approve map"}
+              </BigBtn>
             </div>
           </div>
         </div>

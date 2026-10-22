@@ -3,6 +3,8 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
+import Wordmark from "@/components/Wordmark"
+import { AdminLoading, Field, inputCls } from "@/components/AdminUI"
 
 const AdminPage = () => {
   const [email, setEmail] = useState("")
@@ -24,61 +26,49 @@ const AdminPage = () => {
     checkSession()
   }, [])
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
     setError("")
     setLoading(true)
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (signInError) {
-      setError("Invalid email or password.")
+      setError("Wrong email or password.")
       return
     }
     router.push("/admin/review")
   }
 
-  if (checkingSession) {
-    return (
-      <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
-        <span className="text-xs font-sans text-gray-400">Loading...</span>
-      </div>
-    )
-  }
+  if (checkingSession) return <AdminLoading />
 
   return (
-    <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center font-serif px-4">
-      <div className="border border-[#1a1a1a] p-6 sm:p-8 w-full max-w-xs">
-        <div className="text-center mb-6">
-          <h1 className="text-xl font-bold">GeoBriefing</h1>
-          <p className="text-xs font-sans text-gray-400 mt-1 tracking-widest uppercase">Admin</p>
+    <div className="min-h-screen flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-[520px] bg-paper px-6 py-8 sm:px-12 sm:pt-10 sm:pb-11">
+        <div className="h-1 bg-ink" />
+        <div className="h-px bg-ink mt-[3px]" />
+        <div className="flex justify-center pt-6 pb-1.5">
+          <Wordmark size={34} />
         </div>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-          className="w-full border border-gray-300 px-3 py-2 text-sm font-sans mb-3 outline-none focus:border-[#1a1a1a]"
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-          className="w-full border border-gray-300 px-3 py-2 text-sm font-sans mb-3 outline-none focus:border-[#1a1a1a]"
-        />
-        {error && <p className="text-red-500 text-xs font-sans mb-3">{error}</p>}
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase py-2 hover:bg-[#1a6b3c] transition-colors disabled:opacity-50"
-        >
-          {loading ? "Signing in..." : "Enter"}
-        </button>
-        <div className="mt-6 pt-4 border-t border-gray-100">
-          <Link href="/" className="text-xs font-sans text-gray-400 hover:text-[#1a6b3c]">
-            Back to site
-          </Link>
+        <div className="text-center font-sans font-semibold text-[10.5px] tracking-label uppercase text-danger pb-6 border-b border-ink">
+          Private · Editors only
+        </div>
+        <form onSubmit={handleLogin} className="flex flex-col gap-3.5 pt-6">
+          <Field label="Email">
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="username"
+              className={`${inputCls} border-ink text-base py-3`} />
+          </Field>
+          <Field label="Password">
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password"
+              className={`${inputCls} border-ink text-base py-3`} />
+          </Field>
+          <button type="submit" disabled={loading}
+            className="mt-1.5 font-sans font-semibold text-xs leading-none tracking-button uppercase bg-ink text-paper p-4 hover:bg-accent transition-colors disabled:opacity-50 cursor-pointer">
+            {loading ? "Logging in…" : "Log in"}
+          </button>
+          {error && <span className="font-sans text-[13px] text-danger" role="alert">{error}</span>}
+        </form>
+        <div className="mt-6 pt-4 border-t border-hair">
+          <Link href="/" className="font-sans text-xs tracking-meta uppercase text-meta hover:text-accent">← Back to site</Link>
         </div>
       </div>
     </div>

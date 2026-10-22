@@ -2,8 +2,25 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import AdminHeader from "@/components/AdminHeader"
+import { AdminLoading, AdminTitle, BigBtn, Btn, Notice, inputCls } from "@/components/AdminUI"
 import { supabase } from "@/lib/supabase"
 import { useAdminAuth } from "@/lib/useAdminAuth"
+
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+const Row = ({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-[190px_minmax(0,1fr)] gap-x-4 gap-y-2 items-start py-3.5 border-b border-hair">
+    <div className="sm:pt-2.5">
+      <div className="font-sans font-semibold text-sm">{label}</div>
+      {hint && <div className="font-sans text-xs text-meta mt-0.5">{hint}</div>}
+    </div>
+    <div>{children}</div>
+  </div>
+)
+
+const GroupLabel = ({ children }: { children: React.ReactNode }) => (
+  <div className="font-sans font-bold text-label tracking-label uppercase text-accent pt-7 pb-1">{children}</div>
+)
 
 const SettingsAdminPage = () => {
   const { ready, logout } = useAdminAuth()
@@ -11,14 +28,14 @@ const SettingsAdminPage = () => {
   const [imagePreview, setImagePreview] = useState("")
   const [currentPhoto, setCurrentPhoto] = useState("")
   const [uploading, setUploading] = useState(false)
-  const [photoMessage, setPhotoMessage] = useState("")
   const [editorName, setEditorName] = useState("")
   const [editorBio, setEditorBio] = useState("")
   const [editorMission, setEditorMission] = useState("")
   const [editorContact, setEditorContact] = useState("")
-  const [aboutMessage, setAboutMessage] = useState("")
-  const [savingAbout, setSavingAbout] = useState(false)
-  const [tab, setTab] = useState<"photo" | "about">("photo")
+  const [publishDay, setPublishDay] = useState("Sunday")
+  const [publishTime, setPublishTime] = useState("15:00")
+  const [message, setMessage] = useState("")
+  const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -35,6 +52,8 @@ const SettingsAdminPage = () => {
       setEditorMission(s["editor_mission"] || "")
       setEditorContact(s["editor_contact"] || "")
       setCurrentPhoto(s["editor_photo_url"] || "")
+      setPublishDay(s["publish_day"] || "Sunday")
+      setPublishTime(s["publish_time"] || "15:00")
     }
     setLoading(false)
   }
@@ -49,9 +68,9 @@ const SettingsAdminPage = () => {
   }
 
   const handlePhotoUpload = async () => {
-    if (!imageFile) { setPhotoMessage("Please select a photo first."); return }
+    if (!imageFile) { setMessage("Please select a photo first."); return }
     setUploading(true)
-    setPhotoMessage("")
+    setMessage("")
     try {
       const ext = imageFile.name.split(".").pop()
       const fileName = `profile.${ext}`
@@ -63,173 +82,100 @@ const SettingsAdminPage = () => {
       setCurrentPhoto(photoUrl)
       setImageFile(null)
       setImagePreview("")
-      setPhotoMessage("Photo uploaded and saved!")
+      setMessage("Photo uploaded and saved.")
     } catch (err: unknown) {
-      setPhotoMessage("Error: " + (err as Error).message)
+      setMessage("Error: " + (err as Error).message)
     } finally {
       setUploading(false)
     }
   }
 
-  const handleSaveAbout = async () => {
-    setSavingAbout(true)
-    setAboutMessage("")
+  const handleSave = async () => {
+    setSaving(true)
+    setMessage("")
     try {
-      await Promise.all([
+      const results = await Promise.all([
         supabase.from("site_settings").upsert({ id: "editor_name", value: editorName }),
         supabase.from("site_settings").upsert({ id: "editor_bio", value: editorBio }),
         supabase.from("site_settings").upsert({ id: "editor_mission", value: editorMission }),
         supabase.from("site_settings").upsert({ id: "editor_contact", value: editorContact }),
+        supabase.from("site_settings").upsert({ id: "publish_day", value: publishDay }),
+        supabase.from("site_settings").upsert({ id: "publish_time", value: publishTime }),
       ])
-      setAboutMessage("Saved! The about page will update automatically.")
+      const failed = results.find(r => r.error)
+      if (failed?.error) throw failed.error
+      setMessage("Settings saved. The site updates on the next page load.")
     } catch (err: unknown) {
-      setAboutMessage("Error: " + (err as Error).message)
+      setMessage("Error: " + (err as Error).message)
     } finally {
-      setSavingAbout(false)
+      setSaving(false)
     }
   }
 
-  if (!ready || loading) return (
-    <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
-      <span className="text-xs font-sans text-gray-400">Loading...</span>
-    </div>
-  )
+  if (!ready || loading) return <AdminLoading />
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8 font-serif">
+    <div className="min-h-screen">
+      <AdminHeader active="settings" onLogout={logout} />
 
-      <AdminHeader active="settings" topLeftLabel="Admin · Settings" onLogout={logout} />
-
-      <div className="flex gap-0 border-b border-gray-200 mb-8">
-        {(["photo", "about"] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`text-xs font-sans font-bold tracking-widest uppercase px-4 py-2 border-b-2 transition-colors ${
-              tab === t ? "border-[#1a6b3c] text-[#1a6b3c]" : "border-transparent text-gray-500 hover:text-[#1a1a1a]"
-            }`}>
-            {t === "photo" ? "Editor Photo" : "About Page"}
-          </button>
-        ))}
-      </div>
-
-      {tab === "photo" && (
-        <div className="flex flex-col gap-6">
-          <p className="text-sm font-sans text-gray-500 leading-relaxed">
-            Upload your photo for the About page. Square image recommended, at least 400×400px.
-          </p>
-
-          {currentPhoto && (
-            <div>
-              <p className="text-xs font-sans font-bold tracking-widest uppercase text-gray-400 mb-2">Current photo</p>
-              <img src={currentPhoto} alt="Editor"
-                className="w-32 h-32 object-cover border border-gray-200"
-                onError={() => setCurrentPhoto("")} />
-            </div>
-          )}
-
-          <div>
-            <label className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 block mb-2">
-              Select new photo
-            </label>
-            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange}
-              className="w-full text-sm font-sans border border-gray-300 px-3 py-2 cursor-pointer" />
-          </div>
-
-          {imagePreview && (
-            <div>
-              <p className="text-xs font-sans font-bold tracking-widest uppercase text-gray-400 mb-2">Preview</p>
-              <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover border border-gray-200" />
-            </div>
-          )}
-
-          {photoMessage && (
-            <div className={`px-4 py-3 text-sm font-sans border ${
-              photoMessage.startsWith("Error") ? "border-red-300 bg-red-50 text-red-700" : "border-green-300 bg-green-50 text-green-700"
-            }`}>
-              {photoMessage}
-            </div>
-          )}
-
-          <button onClick={handlePhotoUpload} disabled={uploading || !imageFile}
-            className="bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase px-6 py-3 hover:bg-[#1a6b3c] transition-colors disabled:opacity-50 w-fit">
-            {uploading ? "Uploading..." : "Upload photo"}
-          </button>
-        </div>
-      )}
-
-      {tab === "about" && (
-        <div className="flex flex-col gap-5">
-          <p className="text-sm font-sans text-gray-500 leading-relaxed">
-            Edit your About page content. Changes save directly to the database and update the live About page immediately.
-          </p>
-
-          <div>
-            <label className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 block mb-2">
-              Your name
-            </label>
-            <input type="text" value={editorName} onChange={e => setEditorName(e.target.value)}
-              className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a]" />
-          </div>
-
-          <div>
-            <label className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 block mb-2">
-              Bio — who you are
-            </label>
-            <textarea value={editorBio} onChange={e => setEditorBio(e.target.value)} rows={5}
-              placeholder="Your GIS background, where you are based, what you do..."
-              className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a] resize-none leading-relaxed" />
-          </div>
-
-          <div>
-            <label className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 block mb-2">
-              Mission — why GeoBriefing exists
-            </label>
-            <textarea value={editorMission} onChange={e => setEditorMission(e.target.value)} rows={4}
-              placeholder="Why did you start this? What gap does it fill?"
-              className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a] resize-none leading-relaxed" />
-          </div>
-
-          <div>
-            <label className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 block mb-2">
-              Contact email
-            </label>
-            <input type="email" value={editorContact} onChange={e => setEditorContact(e.target.value)}
-              className="w-full border border-gray-300 px-3 py-2 text-sm font-sans outline-none focus:border-[#1a1a1a]" />
-          </div>
-
-          {aboutMessage && (
-            <div className={`px-4 py-3 text-sm font-sans border ${
-              aboutMessage.startsWith("Error") ? "border-red-300 bg-red-50 text-red-700" : "border-green-300 bg-green-50 text-green-700"
-            }`}>
-              {aboutMessage}
-            </div>
-          )}
-
-          <div className="flex gap-3 items-center">
-            <button onClick={handleSaveAbout} disabled={savingAbout}
-              className="bg-[#1a1a1a] text-white text-xs font-sans font-bold tracking-widest uppercase px-6 py-3 hover:bg-[#1a6b3c] transition-colors disabled:opacity-50">
-              {savingAbout ? "Saving..." : "Save changes"}
-            </button>
-            <Link href="/about" target="_blank"
-              className="text-xs font-sans text-[#1a6b3c] hover:underline">
-              Preview About page →
+      <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-12">
+        <div className="max-w-[720px]">
+          <AdminTitle title="Settings" action={
+            <Link href="/about" target="_blank" className="font-sans font-semibold text-xs tracking-nav uppercase text-accent hover:text-accent-deep">
+              Preview About page ↗
             </Link>
-          </div>
+          } />
+          <Notice message={message} />
 
-          {(editorBio || editorMission) && (
-            <div className="border border-gray-200 p-5 bg-gray-50 mt-2">
-              <p className="text-xs font-sans font-bold text-gray-400 uppercase tracking-widest mb-3">Live preview</p>
-              {editorName && <h3 className="text-lg font-bold mb-3">{editorName}</h3>}
-              {editorBio && <p className="text-sm font-sans text-gray-700 leading-relaxed mb-3">{editorBio}</p>}
-              {editorMission && <p className="text-sm font-sans text-gray-700 leading-relaxed mb-3">{editorMission}</p>}
-              {editorContact && (
-                <p className="text-sm font-sans text-gray-500">
-                  Contact: <span className="text-[#1a6b3c]">{editorContact}</span>
-                </p>
-              )}
+          <GroupLabel>Publishing</GroupLabel>
+          <Row label="Publish day" hint={`Used in every "Every ${publishDay}" line`}>
+            <select value={publishDay} onChange={e => setPublishDay(e.target.value)} className={inputCls}>
+              {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </Row>
+          <Row label="Publish time" hint="Asia/Karachi">
+            <input type="time" value={publishTime} onChange={e => setPublishTime(e.target.value)} className={inputCls} />
+          </Row>
+
+          <GroupLabel>The editor</GroupLabel>
+          <Row label="Editor name" hint="Shown on every note and email">
+            <input type="text" value={editorName} onChange={e => setEditorName(e.target.value)} className={inputCls} />
+          </Row>
+          <Row label="Editor photo" hint="Square, 400px minimum">
+            <div className="flex items-center gap-4">
+              {imagePreview || currentPhoto ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img loading="lazy" src={imagePreview || currentPhoto} alt="Editor" onError={() => setCurrentPhoto("")}
+                  className="w-16 h-16 rounded-full object-cover border border-hair-2 flex-none" />
+              ) : <span className="w-16 h-16 rounded-full hatch border border-hair-2 flex-none" />}
+              <div className="flex flex-wrap gap-2">
+                <label className="font-sans font-semibold text-label leading-none tracking-nav uppercase px-3.5 py-2.5 border border-ink bg-card text-ink hover:border-accent hover:text-accent cursor-pointer">
+                  {imageFile ? "Change" : "Choose photo"}
+                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange} className="sr-only" />
+                </label>
+                {imageFile && (
+                  <Btn variant="primary" onClick={handlePhotoUpload} disabled={uploading}>{uploading ? "Uploading…" : "Upload"}</Btn>
+                )}
+              </div>
             </div>
-          )}
+          </Row>
+          <Row label="Bio" hint="About page, two or three sentences">
+            <textarea value={editorBio} onChange={e => setEditorBio(e.target.value)} rows={4}
+              placeholder="Your GIS background, where you are based, what you do…" className={`${inputCls} resize-y`} />
+          </Row>
+          <Row label="Mission" hint="Why GeoBriefing exists">
+            <textarea value={editorMission} onChange={e => setEditorMission(e.target.value)} rows={3}
+              placeholder="Why did you start this? What gap does it fill?" className={`${inputCls} resize-y`} />
+          </Row>
+          <Row label="Contact email" hint="Used for replies and source suggestions">
+            <input type="email" value={editorContact} onChange={e => setEditorContact(e.target.value)} className={inputCls} />
+          </Row>
+
+          <BigBtn onClick={handleSave} disabled={saving} className="mt-6">
+            {saving ? "Saving…" : "Save settings"}
+          </BigBtn>
         </div>
-      )}
+      </div>
     </div>
   )
 }

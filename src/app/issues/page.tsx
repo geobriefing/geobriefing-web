@@ -1,64 +1,79 @@
 ﻿export const revalidate = 0
 
-import { supabase } from "@/lib/supabase"
-import { Issue } from "@/types"
 import Link from "next/link"
-import Header from "@/components/Header"
+import { supabase } from "@/lib/supabase"
+import { formatDate } from "@/lib/format"
+import Masthead from "@/components/Masthead"
+import Footer from "@/components/Footer"
+import { Label, Meta, PrimaryLink } from "@/components/Editorial"
+
+interface ArchiveIssue { id: string; issue_number: number; slug: string; headline: string; published_at: string | null }
 
 const IssuesPage = async () => {
   const { data } = await supabase
     .from("issues")
-    .select("id, issue_number, slug, headline, editor_note, published_at, status")
+    .select("id, issue_number, slug, headline, published_at")
     .eq("status", "published")
     .order("issue_number", { ascending: false })
 
-  const issues = (data || []) as Issue[]
+  const issues = (data || []) as ArchiveIssue[]
+
+  // Group by month of publication, newest first.
+  const groups: { month: string; items: ArchiveIssue[] }[] = []
+  issues.forEach(issue => {
+    const month = formatDate(issue.published_at, "monthYear") || "Undated"
+    const last = groups[groups.length - 1]
+    if (last && last.month === month) last.items.push(issue)
+    else groups.push({ month, items: [issue] })
+  })
+
+  const first = issues[issues.length - 1]
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 font-serif">
+    <div className="min-h-screen">
+      <Masthead active="all-issues" />
 
-      <Header active="all-issues" topLeftLabel="All issues" />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 pb-10 sm:pb-14">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 sm:gap-6 pt-7 sm:pt-10 pb-5 sm:pb-6 border-b-2 border-ink">
+          <div>
+            <Label>Archive</Label>
+            <h1 className="mt-2.5 font-display font-bold text-[30px] sm:text-[44px] leading-[1.05] tracking-[-0.012em]">All issues</h1>
+          </div>
+          {issues.length > 0 && (
+            <Meta>
+              {issues.length} {issues.length === 1 ? "issue" : "issues"}
+              {first?.published_at ? ` since ${formatDate(first.published_at, "monthYear")}` : ""}
+            </Meta>
+          )}
+        </div>
 
-      <h2 className="text-xs font-sans font-bold tracking-widest uppercase text-gray-500 mb-6">
-        All issues
-      </h2>
+        {issues.length === 0 && (
+          <div className="py-16 text-center">
+            <p className="font-serif text-lg text-ink-2">No issues have been published yet.</p>
+            <div className="mt-6"><PrimaryLink href="/subscribe">Get the first one</PrimaryLink></div>
+          </div>
+        )}
 
-      <div className="flex flex-col gap-0">
-        {issues.map((issue) => (
-          <div key={issue.id} className="border-b border-gray-200 py-5">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2 flex-wrap">
-                  <span className="text-xs font-sans font-bold text-[#1a6b3c] tracking-widest uppercase">
-                    {`Issue #${issue.issue_number}`}
+        {groups.map(group => (
+          <div key={group.month} className="grid grid-cols-1 sm:grid-cols-[160px_minmax(0,1fr)] gap-x-6 pt-6">
+            <Label className="sm:pt-[18px]">{group.month}</Label>
+            <div>
+              {group.items.map(issue => (
+                <Link key={issue.id} href={`/issues/${issue.slug}`}
+                  className="grid grid-cols-[48px_minmax(0,1fr)] sm:grid-cols-[56px_minmax(0,1fr)_auto] gap-x-4 items-baseline py-3.5 border-b border-hair text-ink hover:text-accent">
+                  <span className="font-mono text-[13px] text-meta">#{issue.issue_number}</span>
+                  <span className="font-display font-semibold text-lg sm:text-xl leading-[1.3]">{issue.headline}</span>
+                  <span className="col-start-2 sm:col-start-auto font-sans font-medium text-caption tracking-meta uppercase text-meta">
+                    {formatDate(issue.published_at, "dayMonth")}
                   </span>
-                  <span className="text-xs font-sans text-gray-400">
-                    {issue.published_at
-                      ? new Date(issue.published_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-                      : ""}
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-bold leading-snug mb-2">{issue.headline}</h3>
-                {issue.editor_note && (
-                  <p className="text-sm font-sans text-gray-500 leading-relaxed mb-2 line-clamp-2">
-                    {issue.editor_note}
-                  </p>
-                )}
-                <Link href={`/issues/${issue.slug}`}
-                  className="text-xs font-sans font-bold tracking-widest uppercase text-[#1a6b3c] hover:underline">
-                  Read →
                 </Link>
-              </div>
+              ))}
             </div>
           </div>
         ))}
-      </div>
+      </main>
 
-      <footer className="border-t-2 border-[#1a1a1a] pt-4 mt-8 flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-center">
-        <span className="text-xs font-sans text-gray-400">2026 GeoBriefing</span>
-        <Link href="/" className="text-xs font-sans text-[#1a6b3c] hover:underline">Back to latest issue</Link>
-      </footer>
-
+      <Footer />
     </div>
   )
 }
