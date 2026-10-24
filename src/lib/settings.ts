@@ -6,34 +6,52 @@ export interface SiteSettings {
   editorMission: string
   editorContact: string
   editorPhotoUrl: string
-  /** Publish day shown in all "Every Sunday" copy. */
+  /** Display form, e.g. "Sunday". Used in all "Every Sunday" copy. */
   publishDay: string
-  /** Publish time, Asia/Karachi. */
+  /** Stored form, e.g. "sunday". Used by the scheduler. */
+  publishDayKey: string
+  /** "HH:MM" in `timezone`. */
   publishTime: string
+  timezone: string
+  fromAddress: string
 }
 
-const DEFAULTS: SiteSettings = {
-  editorName: "",
-  editorBio: "",
-  editorMission: "",
-  editorContact: "",
-  editorPhotoUrl: "",
-  publishDay: "Sunday",
+const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+
+const DEFAULTS = {
+  publishDay: "sunday",
   publishTime: "15:00",
+  timezone: "Asia/Karachi",
+  fromAddress: "GeoBriefing <onboarding@resend.dev>",
 }
 
-/** Reads the key/value site_settings table. Missing keys fall back to defaults. */
-export const getSettings = async (): Promise<SiteSettings> => {
-  const { data } = await supabase.from("site_settings").select("id, value")
+const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+/** Builds settings from key/value rows. Unknown or missing keys fall back to defaults. */
+export const settingsFromRows = (rows: { id: string; value: string }[]): SiteSettings => {
   const s: Record<string, string> = {}
-  ;(data || []).forEach((row: { id: string; value: string }) => { s[row.id] = row.value })
+  rows.forEach(r => { s[r.id] = r.value })
+  const day = (s["publish_day"] || DEFAULTS.publishDay).toLowerCase()
+  const publishDayKey = DAYS.includes(day) ? day : DEFAULTS.publishDay
+  const time = /^\d{1,2}:\d{2}$/.test(s["publish_time"] || "") ? s["publish_time"] : DEFAULTS.publishTime
   return {
-    editorName: s["editor_name"] || DEFAULTS.editorName,
-    editorBio: s["editor_bio"] || DEFAULTS.editorBio,
-    editorMission: s["editor_mission"] || DEFAULTS.editorMission,
-    editorContact: s["editor_contact"] || DEFAULTS.editorContact,
-    editorPhotoUrl: s["editor_photo_url"] || DEFAULTS.editorPhotoUrl,
-    publishDay: s["publish_day"] || DEFAULTS.publishDay,
-    publishTime: s["publish_time"] || DEFAULTS.publishTime,
+    editorName: s["editor_name"] || "",
+    editorBio: s["editor_bio"] || "",
+    editorMission: s["editor_mission"] || "",
+    editorContact: s["editor_contact"] || "",
+    editorPhotoUrl: s["editor_photo_url"] || "",
+    publishDay: capitalise(publishDayKey),
+    publishDayKey,
+    publishTime: time,
+    timezone: s["timezone"] || DEFAULTS.timezone,
+    fromAddress: s["from_address"] || DEFAULTS.fromAddress,
   }
 }
+
+/** Reads the key/value site_settings table: the single source for schedule and editor identity. */
+export const getSettings = async (): Promise<SiteSettings> => {
+  const { data } = await supabase.from("site_settings").select("id, value")
+  return settingsFromRows(data || [])
+}
+
+export const PUBLISH_DAYS = DAYS

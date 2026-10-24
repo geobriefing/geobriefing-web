@@ -1,660 +1,348 @@
 "use client"
-import { useState, useEffect, useCallback } from "react"
+import { useCallback, useEffect, useState } from "react"
 import AdminHeader from "@/components/AdminHeader"
 import { RegionPill, TypePill } from "@/components/Pills"
 import { AdminLoading, BigBtn, Btn, Chip, Notice, StatusText, softInputCls } from "@/components/AdminUI"
-import { supabase } from "@/lib/supabase"
 import { useAdminAuth } from "@/lib/useAdminAuth"
+import { adminFetch, adminPost } from "@/lib/adminApi"
 import { formatDate } from "@/lib/format"
+import { DATASET_FORMATS, DESK_SECTIONS, REGIONS, SORTABLE, type DeskSection } from "@/lib/deskSections"
 
-// ─────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>
 
-type SectionName =
-  | "quote" | "news" | "events" | "features" | "gis_story"
-  | "maps_dont_lie" | "jokes" | "fun_facts" | "games" | "comics"
-
-interface Issue {
-  id: string
-  issue_number: number
-  headline: string
-  editor_note: string | null
-  status: string
-  published_at: string | null
+interface DeskData {
+  issues: Row[]
+  issue: Row | null
+  review: { section_name: string; reviewed: boolean; skipped: boolean }[]
+  sections: Record<DeskSection, Row[]>
+  hooks: {
+    mustRead: { id: string; title: string } | null
+    gamesTeaser: { lastAnswer: string | null; pctCorrect: number | null; plays: number; thisWeek: string } | null
+    lastWeekPlays: number
+    replyPrompt: string
+    replyCount: number
+    lastIssueReplyCount: number
+  }
+  schedule: { publishDay: string; publishTime: string; timezone: string; nextSlot: string }
 }
-
-interface ReviewRow {
-  id: string
-  issue_id: string
-  section_name: SectionName
-  reviewed: boolean
-  skipped: boolean
-}
-
-interface Story {
-  id: string; title: string; summary: string; source_name: string; scraped_at: string | null
-  region: string; topic: string; status: string; is_lead: boolean
-}
-interface EventItem {
-  id: string; name: string; description: string; start_date: string
-  location: string; status: string; event_type: string | null
-}
-interface Quote { id: string; quote_text: string; quote_author: string; quote_role: string; status: string }
-interface Joke { id: string; setup: string; punchline: string; topic: string; status: string }
-interface Fact { id: string; fact: string; source: string; topic: string; status: string }
-interface GisStory { id: string; title: string; content: string; story_type: string; status: string }
-interface MapItem { id: string; title: string; commentary: string; map_type: string; image_url: string | null; status: string }
-interface Game { id: string; game_type: string; data: Record<string, unknown>; status: string }
-interface ComicStrip { id: string; title: string; image_url: string | null; status: string }
-interface Feature {
-  id: string; title: string; type: string; author_name: string
-  body_markdown: string; is_ai_suggested: boolean; approved_as_is: boolean; status: string
-}
-
-// Sections in the order they appear in the issue, then the extras.
-const SECTION_ORDER: SectionName[] = [
-  "news", "gis_story", "maps_dont_lie", "comics", "games", "events",
-  "quote", "jokes", "fun_facts", "features",
-]
-
-const SECTION_LABELS: Record<SectionName, string> = {
-  news: "GIS News",
-  gis_story: "GIS Story",
-  maps_dont_lie: "Maps Don't Lie",
-  comics: "Comics",
-  games: "Games",
-  events: "Events",
-  quote: "Quote of the week",
-  jokes: "Jokes",
-  fun_facts: "Fun facts",
-  features: "Features",
-}
-
-// Sections that can be left out of an issue.
-const SKIPPABLE: SectionName[] = ["events", "features", "jokes", "fun_facts", "comics", "games", "maps_dont_lie"]
 
 const FEATURE_TYPES = ["Interview", "Concept Explainer", "Book & Paper Review", "App & Tool Review", "Opinion"]
+const titleCls = `${softInputCls} font-display font-semibold text-h3 leading-[1.3]`
+const bodyCls = `${softInputCls} font-sans text-base sm:text-[15px] leading-[1.55] text-ink-2 resize-y`
+const smallCls = `${softInputCls} font-sans text-base sm:text-[15px]`
 
-// ─────────────────────────────────────────
-// Item card
-// ─────────────────────────────────────────
+const slotLabel = (iso: string, tz: string) =>
+  new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: tz })
+    .format(new Date(iso)).replace(",", "")
 
-const ItemCard = ({
-  status, lead = false, aiDraft = false, badges, meta, children, actions,
-}: {
-  status: string
-  lead?: boolean
-  aiDraft?: boolean
-  badges?: React.ReactNode
-  meta?: React.ReactNode
-  children: React.ReactNode
-  actions: React.ReactNode
-}) => {
-  const bar = lead ? "border-l-accent" :
-    status === "approved" ? "border-l-[#A9D1B8]" :
-    status === "discarded" ? "border-l-[#E5B3A8]" : "border-l-[#E2C98A]"
-  return (
-    <div className={`bg-card border border-hair border-l-[3px] ${bar} mt-3.5 px-4 py-4 sm:px-[18px] ${status === "discarded" ? "opacity-55" : ""}`}>
-      <div className="flex flex-wrap justify-between gap-3 items-center mb-3">
-        <div className="flex flex-wrap gap-2 items-center">
-          {aiDraft && (
-            <span className="font-mono font-semibold text-[10px] leading-none tracking-[.04em] px-1.5 py-1 bg-ink text-paper">AI DRAFT</span>
-          )}
-          {lead && (
-            <span className="font-sans font-bold text-[10px] leading-none tracking-meta uppercase px-[7px] py-1 bg-accent text-paper">★ Lead</span>
-          )}
-          {badges}
-          {meta && <span className="font-sans font-medium text-xs text-meta">{meta}</span>}
-        </div>
-        <StatusText status={status} />
-      </div>
-      <div className="flex flex-col gap-2">{children}</div>
-      <div className="flex flex-wrap gap-2 mt-3">{actions}</div>
-    </div>
-  )
-}
-
-const titleInputCls = `${softInputCls} font-display font-semibold text-h3 leading-[1.3]`
-const bodyInputCls = `${softInputCls} font-sans text-base sm:text-[15px] leading-[1.55] text-ink-2 resize-y`
-
-// Items from the weekly pipeline are AI drafts until the editor approves them.
-const isAiDraft = (status: string) => status === "draft"
-
-// ─────────────────────────────────────────
-// Main component
-// ─────────────────────────────────────────
+/** What the editor typed but hasn't saved, per item id. */
+type Edits = Record<string, Row>
 
 const EditorsDeskPage = () => {
   const { ready, logout } = useAdminAuth()
-
-  const [issues, setIssues] = useState<Issue[]>([])
-  const [currentIssue, setCurrentIssue] = useState<Issue | null>(null)
-  const [reviewRows, setReviewRows] = useState<ReviewRow[]>([])
-  const [activeTab, setActiveTab] = useState<SectionName>("news")
+  const [desk, setDesk] = useState<DeskData | null>(null)
+  const [issueId, setIssueId] = useState<string | null>(null)
+  const [active, setActive] = useState<DeskSection>("news")
+  const [edits, setEdits] = useState<Edits>({})
+  const [replyPrompt, setReplyPrompt] = useState("")
   const [message, setMessage] = useState("")
-  const [loadingIssue, setLoadingIssue] = useState(true)
-  const [publishing, setPublishing] = useState(false)
+  const [busy, setBusy] = useState(false)
 
-  const [stories, setStories] = useState<Story[]>([])
-  const [events, setEvents] = useState<EventItem[]>([])
-  const [quote, setQuote] = useState<Quote | null>(null)
-  const [jokes, setJokes] = useState<Joke[]>([])
-  const [facts, setFacts] = useState<Fact[]>([])
-  const [gisStory, setGisStory] = useState<GisStory | null>(null)
-  const [mapItem, setMapItem] = useState<MapItem | null>(null)
-  const [games, setGames] = useState<Game[]>([])
-  const [comics, setComics] = useState<ComicStrip[]>([])
-  const [feature, setFeature] = useState<Feature | null>(null)
-
-  // ── Load the list of draft issues, default to the most recent draft ──
-  useEffect(() => {
-    if (!ready) return
-    const loadIssues = async () => {
-      const { data } = await supabase
-        .from("issues")
-        .select("id, issue_number, headline, editor_note, status, published_at")
-        .order("issue_number", { ascending: false })
-        .limit(10)
-      setIssues(data || [])
-      const firstDraft = (data || []).find(i => i.status === "draft") || (data || [])[0] || null
-      setCurrentIssue(firstDraft)
-      setLoadingIssue(false)
+  const load = useCallback(async (id: string | null) => {
+    try {
+      const data = await adminFetch<DeskData>(`/api/admin/desk${id ? `?issueId=${id}` : ""}`)
+      setDesk(data)
+      setReplyPrompt(data.hooks?.replyPrompt || "")
+      setEdits({})
+    } catch (e) {
+      setMessage(`Error: ${(e as Error).message}`)
     }
-    loadIssues()
-  }, [ready])
-
-  // ── Load everything for the selected issue ──
-  const loadIssueContent = useCallback(async () => {
-    if (!currentIssue) return
-    const issueId = currentIssue.id
-
-    const [
-      { data: reviewData },
-      { data: storiesData },
-      { data: eventsData },
-      { data: quoteData },
-      { data: jokesData },
-      { data: factsData },
-      { data: gisStoryData },
-      { data: mapData },
-      { data: gamesData },
-      { data: comicsData },
-      { data: featureData },
-    ] = await Promise.all([
-      supabase.from("issue_section_review").select("*").eq("issue_id", issueId),
-      supabase.from("stories").select("*").eq("issue_id", issueId).order("relevance_score", { ascending: false }),
-      supabase.from("events").select("*").eq("issue_id", issueId),
-      supabase.from("quotes").select("*").eq("issue_id", issueId).limit(1).maybeSingle(),
-      supabase.from("jokes").select("*").eq("issue_id", issueId),
-      supabase.from("fun_facts").select("*").eq("issue_id", issueId),
-      supabase.from("gis_stories").select("*").eq("issue_id", issueId).limit(1).maybeSingle(),
-      supabase.from("maps_dont_lie").select("*").eq("issue_id", issueId).limit(1).maybeSingle(),
-      supabase.from("games").select("*").eq("issue_id", issueId),
-      supabase.from("comic_strips").select("*").eq("issue_id", issueId),
-      supabase.from("features").select("*").eq("issue_id", issueId).limit(1).maybeSingle(),
-    ])
-
-    setReviewRows(reviewData || [])
-    setStories(storiesData || [])
-    setEvents(eventsData || [])
-    setQuote(quoteData || null)
-    setJokes(jokesData || [])
-    setFacts(factsData || [])
-    setGisStory(gisStoryData || null)
-    setMapItem(mapData || null)
-    setGames(gamesData || [])
-    setComics(comicsData || [])
-    setFeature(featureData || null)
-  }, [currentIssue])
+  }, [])
 
   useEffect(() => {
-    // Fetching the selected issue's content is the point of this effect.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (currentIssue) loadIssueContent()
-  }, [currentIssue, loadIssueContent])
+    if (ready) load(issueId)
+  }, [ready, issueId, load])
 
-  // ── Review row helpers ──
-  const getRow = (section: SectionName) => reviewRows.find(r => r.section_name === section)
+  if (!ready || !desk) return <AdminLoading />
 
-  const setSectionFlag = async (section: SectionName, patch: Partial<Pick<ReviewRow, "reviewed" | "skipped">>) => {
-    if (!currentIssue) return
-    const row = getRow(section)
-    if (!row) { setMessage("Error: this issue has no review row for that section. Re-run the digest builder."); return }
-    const { error } = await supabase.from("issue_section_review").update(patch).eq("id", row.id)
-    if (error) { setMessage("Error: " + error.message); return }
-    setReviewRows(rows => rows.map(r => r.id === row.id ? { ...r, ...patch } : r))
-  }
+  const issue = desk.issue
+  const reviewOf = (key: string) => desk.review.find(r => r.section_name === key)
+  const reviewedCount = DESK_SECTIONS.filter(s => reviewOf(s.key)?.reviewed).length
+  const allReviewed = reviewedCount === DESK_SECTIONS.length
+  const pct = Math.round((reviewedCount / DESK_SECTIONS.length) * 100)
+  const def = DESK_SECTIONS.find(s => s.key === active)!
+  const rows = desk.sections?.[active] || []
+  const activeReview = reviewOf(active)
 
-  const markReviewed = (section: SectionName) => setSectionFlag(section, { reviewed: true, skipped: false })
-  const skipSection = (section: SectionName) => setSectionFlag(section, { reviewed: true, skipped: true })
-  const reopenSection = (section: SectionName) => setSectionFlag(section, { reviewed: false, skipped: false })
-
-  const allSectionsReviewed = SECTION_ORDER.every(s => getRow(s)?.reviewed)
-  const reviewedCount = SECTION_ORDER.filter(s => getRow(s)?.reviewed).length
-
-  // ── Publish ──
-  const publishIssue = async () => {
-    if (!currentIssue || !allSectionsReviewed) return
-    setPublishing(true)
+  const run = async (fn: () => Promise<unknown>, okMessage?: string) => {
+    setBusy(true)
     setMessage("")
-    const { error } = await supabase
-      .from("issues")
-      .update({ status: "published", published_at: new Date().toISOString() })
-      .eq("id", currentIssue.id)
-    setPublishing(false)
-    if (error) { setMessage("Error: " + error.message); return }
-    setMessage(`Issue #${currentIssue.issue_number} is now live.`)
-    setCurrentIssue({ ...currentIssue, status: "published" })
-    setIssues(prev => prev.map(i => i.id === currentIssue.id ? { ...i, status: "published" } : i))
+    try {
+      await fn()
+      if (okMessage) setMessage(okMessage)
+      await load(issue?.id || null)
+    } catch (e) {
+      setMessage(`Error: ${(e as Error).message}`)
+    } finally {
+      setBusy(false)
+    }
   }
 
-  // ── Generic item actions ──
-  const setItemStatus = async (table: string, id: string, status: string) => {
-    await supabase.from(table).update({ status }).eq("id", id)
-    await loadIssueContent()
+  const item = (table: string, action: string, id?: string, extra: Row = {}) =>
+    run(() => adminPost("/api/admin/items", { table, action, id, issueId: issue?.id, ...extra }))
+  const section = (action: string) =>
+    run(() => adminPost("/api/admin/sections", { issueId: issue?.id, section: active, action }))
+  const issueAction = (action: string, okMessage: string, patch?: Row) =>
+    run(() => adminPost(`/api/admin/issues/${issue?.id}`, { action, patch }), okMessage)
+
+  const edit = (id: string, patch: Row) => setEdits(e => ({ ...e, [id]: { ...e[id], ...patch } }))
+  const val = (row: Row, field: string) => (edits[row.id]?.[field] ?? row[field] ?? "")
+  const save = (row: Row) => {
+    const patch = edits[row.id]
+    if (!patch) return setMessage("No changes to save.")
+    return item(def.table, "save", row.id, { patch })
+  }
+  const move = (index: number, dir: -1 | 1) => {
+    const ids = rows.map(r => r.id)
+    const j = index + dir
+    if (j < 0 || j >= ids.length) return
+    ;[ids[index], ids[j]] = [ids[j], ids[index]]
+    item(def.table, "reorder", undefined, { ids })
+  }
+  const add = () => {
+    const blank: Record<string, Row> = {
+      country_desks: { country: "New country", region: "South Asia", intro: "", facts: [], follow: [] },
+      datasets: { name: "New dataset", url: "https://", format: "Other", region: "Global" },
+      events: { name: "New event", start_date: new Date().toISOString().slice(0, 10), url: "https://", event_type: "conference" },
+    }
+    item(def.table, "create", undefined, { patch: blank[def.table] || {} })
   }
 
-  const setLeadStory = async (id: string) => {
-    if (!currentIssue) return
-    await supabase.from("stories").update({ is_lead: false }).eq("issue_id", currentIssue.id)
-    await supabase.from("stories").update({ is_lead: true }).eq("id", id)
-    await loadIssueContent()
+  const statusChip = (key: DeskSection) => {
+    const r = reviewOf(key)
+    if (r?.skipped) return <Chip tone="skipped">Skipped</Chip>
+    if (r?.reviewed) return <Chip tone="reviewed">Reviewed ✓</Chip>
+    if (!(desk.sections?.[key] || []).length) return <Chip tone="empty">Empty</Chip>
+    return <Chip tone="review">To review</Chip>
   }
 
-  const updateStoryText = (id: string, patch: Partial<Story>) => {
-    setStories(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
-  }
-  const saveStory = async (story: Story) => {
-    await supabase.from("stories").update({ title: story.title, summary: story.summary }).eq("id", story.id)
-    setMessage("Story saved.")
-  }
-
-  const updateEventText = (id: string, patch: Partial<EventItem>) => {
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e))
-  }
-  const saveEvent = async (ev: EventItem) => {
-    await supabase.from("events").update({ name: ev.name, description: ev.description }).eq("id", ev.id)
-    setMessage("Event saved.")
-  }
-
-  const saveQuote = async () => {
-    if (!quote) return
-    await supabase.from("quotes").update({
-      quote_text: quote.quote_text, quote_author: quote.quote_author, quote_role: quote.quote_role,
-    }).eq("id", quote.id)
-    setMessage("Quote saved.")
-  }
-
-  const saveJoke = async (joke: Joke) => {
-    await supabase.from("jokes").update({ setup: joke.setup, punchline: joke.punchline }).eq("id", joke.id)
-    setMessage("Joke saved.")
-  }
-  const updateJokeText = (id: string, patch: Partial<Joke>) => {
-    setJokes(prev => prev.map(j => j.id === id ? { ...j, ...patch } : j))
-  }
-
-  const saveFact = async (fact: Fact) => {
-    await supabase.from("fun_facts").update({ fact: fact.fact, source: fact.source }).eq("id", fact.id)
-    setMessage("Fact saved.")
-  }
-  const updateFactText = (id: string, patch: Partial<Fact>) => {
-    setFacts(prev => prev.map(f => f.id === id ? { ...f, ...patch } : f))
-  }
-
-  const saveGisStory = async () => {
-    if (!gisStory) return
-    await supabase.from("gis_stories").update({ title: gisStory.title, content: gisStory.content }).eq("id", gisStory.id)
-    setMessage("GIS Story saved.")
-  }
-
-  const saveMap = async () => {
-    if (!mapItem) return
-    await supabase.from("maps_dont_lie").update({ title: mapItem.title, commentary: mapItem.commentary }).eq("id", mapItem.id)
-    setMessage("Map saved.")
-  }
-
-  const saveFeature = async () => {
-    if (!feature) return
-    await supabase.from("features").update({
-      title: feature.title, type: feature.type, author_name: feature.author_name,
-      body_markdown: feature.body_markdown, is_ai_suggested: false,
-    }).eq("id", feature.id)
-    setMessage("Feature saved.")
-    setFeature({ ...feature, is_ai_suggested: false })
-  }
-  const approveAsIsFeature = async () => {
-    if (!feature) return
-    await supabase.from("features").update({ approved_as_is: true, status: "approved" }).eq("id", feature.id)
-    setMessage("Feature approved as-is.")
-    await loadIssueContent()
-  }
-
-  // Approve / Discard / Restore buttons shared by most cards.
-  const statusActions = (table: string, id: string, status: string) => (
-    <>
-      <span className="flex-1" />
-      {status === "discarded" ? (
-        <Btn variant="danger" onClick={() => setItemStatus(table, id, "draft")}>Restore</Btn>
-      ) : (
-        <Btn variant="danger" onClick={() => setItemStatus(table, id, "discarded")}>Discard</Btn>
-      )}
-    </>
-  )
-  const approveBtn = (table: string, id: string, status: string) =>
-    status === "draft" ? <Btn variant="approve" onClick={() => setItemStatus(table, id, "approved")}>Approve</Btn> : null
-
-  if (!ready || loadingIssue) return <AdminLoading />
-
-  // ── Section state for the sidebar ──
-  const itemCount: Record<SectionName, number> = {
-    news: stories.length, gis_story: gisStory ? 1 : 0, maps_dont_lie: mapItem ? 1 : 0, comics: comics.length,
-    games: games.length, events: events.length, quote: quote ? 1 : 0, jokes: jokes.length,
-    fun_facts: facts.length, features: feature ? 1 : 0,
-  }
-  const sectionState = (s: SectionName): { tone: "review" | "reviewed" | "skipped" | "empty"; label: string } => {
-    const row = getRow(s)
-    if (row?.skipped) return { tone: "skipped", label: "Skipped" }
-    if (row?.reviewed) return { tone: "reviewed", label: "Reviewed ✓" }
-    if (itemCount[s] === 0) return { tone: "empty", label: "Empty" }
-    return { tone: "review", label: "To review" }
-  }
-
-  const activeRow = getRow(activeTab)
-  const statusesFor = (s: SectionName): string[] => ({
-    news: stories.map(x => x.status), gis_story: gisStory ? [gisStory.status] : [], maps_dont_lie: mapItem ? [mapItem.status] : [],
-    comics: comics.map(x => x.status), games: games.map(x => x.status), events: events.map(x => x.status),
-    quote: quote ? [quote.status] : [], jokes: jokes.map(x => x.status), fun_facts: facts.map(x => x.status),
-    features: feature ? [feature.status] : [],
-  }[s])
-  const activeStatuses = statusesFor(activeTab)
-  const countsText = activeStatuses.length
-    ? `${activeStatuses.length} ${activeStatuses.length === 1 ? "item" : "items"} · ${activeStatuses.filter(s => s === "approved").length} approved · ${activeStatuses.filter(s => s === "discarded").length} discarded`
-    : "No items"
-  const pct = Math.round((reviewedCount / SECTION_ORDER.length) * 100)
-  const published = currentIssue?.status === "published"
+  const published = issue?.status === "published"
+  const scheduled = issue?.status === "scheduled"
+  const tz = desk.schedule.timezone
 
   return (
     <div className="min-h-screen">
       <AdminHeader active="review" onLogout={logout} />
-
       <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-12">
 
-        {!currentIssue && (
+        {!issue && (
           <div className="mt-8 border border-dashed border-[#B9B8B0] bg-card px-6 py-12 text-center">
             <div className="font-display font-bold text-[22px]">No issues yet</div>
             <p className="mt-2 font-sans text-[15px] text-ink-3">Run the weekly pipeline to create the first draft issue.</p>
           </div>
         )}
 
-        {currentIssue && (
+        {issue && (
           <>
-            {/* Title row: issue picker, progress and publish */}
+            {/* Title row */}
             <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 py-5 border-b border-hair">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <h1 className="font-display font-bold text-[26px] leading-none">Editor&apos;s Desk</h1>
-                <select
-                  value={currentIssue.id}
-                  onChange={e => { const found = issues.find(i => i.id === e.target.value); if (found) setCurrentIssue(found) }}
-                  className="w-full sm:w-auto font-sans text-base sm:text-sm px-2.5 py-2.5 sm:py-2 border border-hair-2 bg-card text-ink rounded-none outline-none focus:border-accent max-w-full"
-                >
-                  {issues.map(i => (
+                <select value={issue.id} onChange={e => setIssueId(e.target.value)} aria-label="Issue"
+                  className="w-full sm:w-auto font-sans text-base sm:text-sm px-2.5 py-2.5 sm:py-2 border border-hair-2 bg-card text-ink rounded-none outline-none focus:border-accent">
+                  {desk.issues.map(i => (
                     <option key={i.id} value={i.id}>
                       Issue #{i.issue_number} · {i.status === "published" ? `published ${formatDate(i.published_at, "dayMonth")}` : i.status}
                     </option>
                   ))}
                 </select>
                 <span className="font-sans font-medium text-[13px] text-ink-3">
-                  {reviewedCount} of {SECTION_ORDER.length} sections ready
+                  {published
+                    ? `Published ${formatDate(issue.published_at, "short")}${issue.email_sent_at ? " · emailed" : " · not emailed"}`
+                    : scheduled
+                      ? `Scheduled · publishes ${slotLabel(desk.schedule.nextSlot, tz)} (${tz})`
+                      : `${reviewedCount} of ${DESK_SECTIONS.length} sections ready · next slot ${slotLabel(desk.schedule.nextSlot, tz)}`}
                 </span>
               </div>
-              <div className="flex items-center gap-3.5">
-                <div className="w-[180px] h-1.5 bg-hair" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-                  <div className="h-1.5 bg-accent" style={{ width: `${pct}%` }} />
-                </div>
-                <button
-                  type="button"
-                  onClick={publishIssue}
-                  disabled={!allSectionsReviewed || publishing || published}
-                  className={`min-h-11 sm:min-h-0 font-sans font-semibold text-xs leading-none tracking-button uppercase text-paper px-[18px] py-[13px] transition-colors ${
-                    allSectionsReviewed && !published ? "bg-accent hover:bg-accent-deep cursor-pointer" : "bg-[#B9B8B0] cursor-not-allowed"
-                  }`}
-                >
-                  {published ? "Published" : publishing ? "Publishing…" : "Publish issue"}
-                </button>
+              <div className="flex flex-wrap items-center gap-2.5">
+                {!published && (
+                  <div className="w-[140px] h-1.5 bg-hair" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+                    <div className="h-1.5 bg-accent" style={{ width: `${pct}%` }} />
+                  </div>
+                )}
+                <Btn disabled={busy} onClick={async () => {
+                  try {
+                    const html = await adminFetch<string>(`/api/admin/email-preview?slug=${encodeURIComponent(issue.slug)}`)
+                    const w = window.open("", "_blank")
+                    w?.document.write(html)
+                    w?.document.close()
+                  } catch (e) { setMessage(`Error: ${(e as Error).message}`) }
+                }}>Preview email</Btn>
+                <Btn disabled={busy} onClick={() => issueAction("test_email", "Test email sent to your contact address.")}>Send test</Btn>
+                {!published && !scheduled && (
+                  <button type="button" disabled={!allReviewed || busy}
+                    onClick={() => issueAction("schedule", `Scheduled for ${desk.schedule.publishDay} ${desk.schedule.publishTime}.`)}
+                    className={`min-h-11 sm:min-h-0 font-sans font-semibold text-xs leading-none tracking-button uppercase text-paper px-[18px] py-[13px] ${
+                      allReviewed ? "bg-accent hover:bg-accent-deep cursor-pointer" : "bg-[#B9B8B0] cursor-not-allowed"}`}>
+                    Schedule
+                  </button>
+                )}
+                {scheduled && <Btn disabled={busy} onClick={() => issueAction("unschedule", "Moved back to draft.")}>Unschedule</Btn>}
+                {!published && (
+                  <Btn variant="primary" disabled={!allReviewed || busy}
+                    onClick={() => { if (window.confirm("Publish now and email every subscriber?")) issueAction("publish_now", "Published.") }}>
+                    Publish now
+                  </Btn>
+                )}
+                {published && !issue.email_sent_at && (
+                  <Btn variant="primary" disabled={busy} onClick={() => issueAction("resend_email", "Email sent.")}>Send email</Btn>
+                )}
               </div>
             </div>
 
             <Notice message={message} />
 
+            {/* Hooks bar */}
+            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] border border-hair bg-card mt-4">
+              <div className="px-4 py-3.5">
+                <div className="font-sans font-bold text-[10.5px] leading-none tracking-button uppercase text-accent">If you read one thing</div>
+                <div className="font-display font-semibold text-[15.5px] leading-[1.3] mt-1.5">{desk.hooks.mustRead?.title || "Not set"}</div>
+                <div className="font-sans text-xs text-meta mt-1">
+                  {desk.hooks.mustRead ? "Change it with \"Set as must-read\" on any story" : "Until set, the lead story is used"}
+                </div>
+              </div>
+              <div className="px-4 py-3.5 border-t md:border-t-0 md:border-l border-hair">
+                <div className="font-sans font-bold text-[10.5px] leading-none tracking-button uppercase text-accent">Games teaser</div>
+                <div className="font-sans text-[13.5px] leading-[1.45] text-ink-2 mt-1.5">
+                  {desk.hooks.gamesTeaser?.lastAnswer
+                    ? <>Last week: <b>{desk.hooks.gamesTeaser.lastAnswer}</b>{desk.hooks.gamesTeaser.pctCorrect != null && ` · ${desk.hooks.gamesTeaser.pctCorrect}% of ${desk.hooks.gamesTeaser.plays}`}</>
+                    : "No answers from last week yet"}
+                  <span className="text-meta"> · auto-filled from plays</span>
+                </div>
+              </div>
+              <div className="px-4 py-3.5 border-t md:border-t-0 md:border-l border-hair">
+                <div className="font-sans font-bold text-[10.5px] leading-none tracking-button uppercase text-accent">Reply to play</div>
+                <input value={replyPrompt} onChange={e => setReplyPrompt(e.target.value)} placeholder="Hint: home to the Fedchenko Glacier"
+                  onBlur={() => replyPrompt !== (issue.reply_prompt || "") && issueAction("update", "Reply prompt saved.", { reply_prompt: replyPrompt })}
+                  className={`${smallCls} mt-1.5 py-[7px]`} aria-label="Reply to play hint" />
+                <div className="font-sans text-xs text-meta mt-1">
+                  {desk.hooks.lastIssueReplyCount} {desk.hooks.lastIssueReplyCount === 1 ? "reply" : "replies"} to last week&apos;s guess
+                  {desk.hooks.replyCount ? ` · ${desk.hooks.replyCount} to this issue` : ""}
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-5 lg:gap-7 pt-5">
-              {/* Section list */}
               <nav className="flex lg:flex-col border-t-2 border-ink overflow-x-auto no-scrollbar lg:self-start">
-                {SECTION_ORDER.map(s => {
-                  const st = sectionState(s)
-                  const active = s === activeTab
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setActiveTab(s)}
-                      className={`flex-none flex justify-between items-center gap-2.5 px-3 py-3 border-b border-hair border-l-[3px] text-left font-sans text-[14.5px] text-ink cursor-pointer ${
-                        active ? "border-l-accent bg-card font-bold" : "border-l-transparent font-medium hover:bg-card"
-                      }`}
-                    >
-                      <span className="whitespace-nowrap">{SECTION_LABELS[s]}</span>
-                      <Chip tone={st.tone}>{st.label}</Chip>
-                    </button>
-                  )
-                })}
+                {DESK_SECTIONS.map(s => (
+                  <button key={s.key} type="button" onClick={() => setActive(s.key)}
+                    className={`flex-none flex justify-between items-center gap-2.5 px-3 py-3 border-b border-hair border-l-[3px] text-left font-sans text-[14.5px] text-ink cursor-pointer ${
+                      s.key === active ? "border-l-accent bg-card font-bold" : "border-l-transparent font-medium hover:bg-card"}`}>
+                    <span className="whitespace-nowrap">{s.label}</span>
+                    {statusChip(s.key)}
+                  </button>
+                ))}
                 <div className="hidden lg:block px-1 py-3.5 font-sans text-[12.5px] leading-[1.5] text-meta">
-                  Every section must be reviewed or skipped before publishing.
+                  Every section must be reviewed or skipped before scheduling.
                 </div>
               </nav>
 
-              {/* Active section */}
               <section>
                 <div className="flex flex-wrap justify-between items-end gap-4 pb-3.5 border-b-2 border-ink">
                   <div>
                     <div className="font-sans font-bold text-label leading-none tracking-label uppercase text-accent">Section</div>
-                    <h2 className="font-display font-bold text-h1 leading-[1.1] mt-1.5">{SECTION_LABELS[activeTab]}</h2>
+                    <h2 className="font-display font-bold text-h1 leading-[1.1] mt-1.5">{def.label}</h2>
                   </div>
-                  <div className="font-sans font-medium text-[13px] text-ink-3">{countsText}</div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-sans font-medium text-[13px] text-ink-3">
+                      {rows.length
+                        ? `${rows.length} ${rows.length === 1 ? "item" : "items"} · ${rows.filter(r => r.status === "approved").length} approved · ${rows.filter(r => r.status === "discarded").length} discarded`
+                        : "No items"}
+                    </span>
+                    {def.creatable && !published && <Btn disabled={busy} onClick={add}>+ Add item</Btn>}
+                  </div>
                 </div>
 
-                {activeRow?.skipped && (
+                {activeReview?.skipped && (
                   <div className="mt-3.5 flex flex-wrap justify-between items-center gap-3 bg-paper-2 border border-hair px-4 py-3">
                     <span className="font-sans text-sm text-ink-3">This section is skipped and won&apos;t appear in the issue.</span>
-                    <Btn variant="secondary" onClick={() => reopenSection(activeTab)}>Undo skip</Btn>
+                    <Btn onClick={() => section("reopen")}>Undo skip</Btn>
                   </div>
                 )}
 
-                {itemCount[activeTab] === 0 && (
+                {rows.length === 0 && (
                   <div className="mt-3.5 border border-dashed border-[#B9B8B0] bg-card px-6 py-12 text-center">
-                    <div className="font-display font-bold text-[22px] leading-[1.2]">Nothing for {SECTION_LABELS[activeTab]} this week</div>
+                    <div className="font-display font-bold text-[22px] leading-[1.2]">Nothing for {def.label} this week</div>
                     <p className="mt-2 mb-[18px] mx-auto max-w-[420px] font-sans text-[15px] leading-[1.55] text-ink-3">
-                      {activeTab === "comics"
+                      {active === "comics"
                         ? "No strips uploaded for this issue yet. Upload one from the Comics tab, or skip the section."
-                        : "The pipeline found no items. Skip the section and it won't appear in the issue."}
+                        : "The pipeline found nothing. Add an item by hand, or skip the section and it won't appear in the issue."}
                     </p>
-                    {SKIPPABLE.includes(activeTab) && !activeRow?.skipped && (
-                      <Btn variant="secondary" onClick={() => skipSection(activeTab)}>Skip this week</Btn>
-                    )}
+                    <div className="flex flex-wrap justify-center gap-2.5">
+                      {def.creatable && <Btn variant="primary" onClick={add}>+ Add item</Btn>}
+                      {def.skippable && !activeReview?.reviewed && <Btn onClick={() => section("skip")}>Skip this week</Btn>}
+                    </div>
                   </div>
                 )}
 
-                {/* ── NEWS ── */}
-                {activeTab === "news" && stories.map(story => (
-                  <ItemCard key={story.id} status={story.status} lead={story.is_lead} aiDraft={isAiDraft(story.status)}
-                    badges={<RegionPill region={story.region} />}
-                    meta={[story.source_name, story.topic, story.scraped_at ? `scraped ${formatDate(story.scraped_at, "dayMonth")}` : null].filter(Boolean).join(" · ")}
-                    actions={<>
-                      {approveBtn("stories", story.id, story.status)}
-                      <Btn onClick={() => saveStory(story)}>Save edits</Btn>
-                      {!story.is_lead && <Btn onClick={() => setLeadStory(story.id)}>Set as lead</Btn>}
-                      {statusActions("stories", story.id, story.status)}
-                    </>}>
-                    <input aria-label="Title" type="text" value={story.title} onChange={e => updateStoryText(story.id, { title: e.target.value })} className={titleInputCls} />
-                    <textarea aria-label="Summary" value={story.summary || ""} onChange={e => updateStoryText(story.id, { summary: e.target.value })} rows={3} className={bodyInputCls} />
-                  </ItemCard>
-                ))}
+                {rows.map((row, index) => {
+                  const isLead = active === "news" && row.is_lead
+                  const isMust = active === "news" && desk.hooks.mustRead?.id === row.id
+                  const ai = row.ai_draft ?? row.is_ai_suggested
+                  const bar = isLead || isMust ? "border-l-accent" :
+                    row.status === "approved" ? "border-l-[#A9D1B8]" :
+                    row.status === "discarded" ? "border-l-[#E5B3A8]" : "border-l-[#E2C98A]"
+                  return (
+                    <div key={row.id} className={`bg-card border border-hair border-l-[3px] ${bar} mt-3.5 px-4 py-4 sm:px-[18px] ${row.status === "discarded" ? "opacity-55" : ""}`}>
+                      <div className="flex flex-wrap justify-between gap-3 items-center mb-3">
+                        <div className="flex flex-wrap gap-2 items-center">
+                          {ai && <span className="font-mono font-semibold text-[10px] leading-none tracking-[.04em] px-1.5 py-1 bg-ink text-paper">AI DRAFT</span>}
+                          {isMust && <span className="font-sans font-bold text-[10px] leading-none tracking-meta uppercase px-[7px] py-1 bg-ink text-paper">If you read one thing</span>}
+                          {isLead && <span className="font-sans font-bold text-[10px] leading-none tracking-meta uppercase px-[7px] py-1 bg-accent text-paper">★ Lead</span>}
+                          <ItemBadges section={active} row={row} />
+                        </div>
+                        {row.status && <StatusText status={row.status} />}
+                      </div>
 
-                {/* ── GIS STORY ── */}
-                {activeTab === "gis_story" && gisStory && (
-                  <ItemCard status={gisStory.status} aiDraft={isAiDraft(gisStory.status)}
-                    badges={<TypePill kind="story" value={gisStory.story_type} />}
-                    actions={<>
-                      {approveBtn("gis_stories", gisStory.id, gisStory.status)}
-                      <Btn onClick={saveGisStory}>Save edits</Btn>
-                      {statusActions("gis_stories", gisStory.id, gisStory.status)}
-                    </>}>
-                    <input aria-label="Title" type="text" value={gisStory.title} onChange={e => setGisStory({ ...gisStory, title: e.target.value })} className={titleInputCls} />
-                    <textarea aria-label="Story" value={gisStory.content} onChange={e => setGisStory({ ...gisStory, content: e.target.value })} rows={14} className={bodyInputCls} />
-                  </ItemCard>
-                )}
+                      <ItemFields section={active} row={row} val={val} edit={edit} />
 
-                {/* ── MAPS DON'T LIE ── */}
-                {activeTab === "maps_dont_lie" && mapItem && (
-                  <ItemCard status={mapItem.status} aiDraft={isAiDraft(mapItem.status)}
-                    badges={<TypePill kind="map" value={mapItem.map_type} />}
-                    meta={mapItem.image_url ? null : "No image yet. Add one in the Maps tab."}
-                    actions={<>
-                      {approveBtn("maps_dont_lie", mapItem.id, mapItem.status)}
-                      <Btn onClick={saveMap}>Save edits</Btn>
-                      {statusActions("maps_dont_lie", mapItem.id, mapItem.status)}
-                    </>}>
-                    <input aria-label="Title" type="text" value={mapItem.title} onChange={e => setMapItem({ ...mapItem, title: e.target.value })} className={titleInputCls} />
-                    {mapItem.image_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img loading="lazy" src={mapItem.image_url} alt={mapItem.title} className="w-full max-h-72 object-contain bg-paper-2 border border-hair" />
-                    )}
-                    <textarea aria-label="Commentary" value={mapItem.commentary} onChange={e => setMapItem({ ...mapItem, commentary: e.target.value })} rows={6} className={bodyInputCls} />
-                  </ItemCard>
-                )}
-
-                {/* ── COMICS ── */}
-                {activeTab === "comics" && comics.map((strip, i) => (
-                  <ItemCard key={strip.id} status={strip.status}
-                    meta={`Strip ${i + 1} of ${comics.length} · upload`}
-                    actions={<>
-                      {approveBtn("comic_strips", strip.id, strip.status)}
-                      {statusActions("comic_strips", strip.id, strip.status)}
-                    </>}>
-                    <div className="font-display font-semibold text-h3">{strip.title}</div>
-                    {strip.image_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img loading="lazy" src={strip.image_url} alt={strip.title} className="w-full border border-hair" />
-                    )}
-                  </ItemCard>
-                ))}
-
-                {/* ── GAMES ── */}
-                {activeTab === "games" && games.map(game => (
-                  <ItemCard key={game.id} status={game.status} aiDraft={isAiDraft(game.status)}
-                    meta="Check it on the live preview before approving."
-                    actions={<>
-                      {approveBtn("games", game.id, game.status)}
-                      {statusActions("games", game.id, game.status)}
-                    </>}>
-                    <div className="font-display font-semibold text-h3 capitalize">{game.game_type.replace(/_/g, " ")}</div>
-                  </ItemCard>
-                ))}
-
-                {/* ── EVENTS ── */}
-                {activeTab === "events" && events.map(ev => (
-                  <ItemCard key={ev.id} status={ev.status} aiDraft={isAiDraft(ev.status)}
-                    badges={<TypePill kind="event" value={ev.event_type} />}
-                    meta={[formatDate(ev.start_date, "short"), ev.location].filter(Boolean).join(" · ")}
-                    actions={<>
-                      {approveBtn("events", ev.id, ev.status)}
-                      <Btn onClick={() => saveEvent(ev)}>Save edits</Btn>
-                      {statusActions("events", ev.id, ev.status)}
-                    </>}>
-                    <input aria-label="Name" type="text" value={ev.name} onChange={e => updateEventText(ev.id, { name: e.target.value })} className={titleInputCls} />
-                    <textarea aria-label="Description" value={ev.description || ""} onChange={e => updateEventText(ev.id, { description: e.target.value })} rows={2} className={bodyInputCls} />
-                  </ItemCard>
-                ))}
-
-                {/* ── QUOTE ── */}
-                {activeTab === "quote" && quote && (
-                  <ItemCard status={quote.status} aiDraft={isAiDraft(quote.status)}
-                    actions={<>
-                      {approveBtn("quotes", quote.id, quote.status)}
-                      <Btn onClick={saveQuote}>Save edits</Btn>
-                    </>}>
-                    <textarea aria-label="Quote text" value={quote.quote_text} onChange={e => setQuote({ ...quote, quote_text: e.target.value })} rows={3}
-                      className={`${softInputCls} font-serif italic text-lg leading-[1.45] resize-y`} placeholder="Quote text" />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <input aria-label="Author" type="text" value={quote.quote_author} onChange={e => setQuote({ ...quote, quote_author: e.target.value })} className={`${softInputCls} font-sans text-base sm:text-[15px]`} placeholder="Author" />
-                      <input aria-label="Author role" type="text" value={quote.quote_role || ""} onChange={e => setQuote({ ...quote, quote_role: e.target.value })} className={`${softInputCls} font-sans text-base sm:text-[15px]`} placeholder="Author role" />
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {row.status === "draft" && <Btn variant="approve" disabled={busy} onClick={() => item(def.table, "approve", row.id)}>Approve</Btn>}
+                        {edits[row.id] && <Btn disabled={busy} onClick={() => save(row)}>Save edits</Btn>}
+                        {active === "news" && !isLead && <Btn disabled={busy} onClick={() => item("stories", "set_lead", row.id)}>Set as lead</Btn>}
+                        {active === "news" && !isMust && <Btn disabled={busy} onClick={() => item("stories", "set_must_read", row.id)}>Set as must-read</Btn>}
+                        {SORTABLE.has(def.table) && rows.length > 1 && (
+                          <>
+                            <Btn disabled={busy || index === 0} onClick={() => move(index, -1)} aria-label="Move up">↑</Btn>
+                            <Btn disabled={busy || index === rows.length - 1} onClick={() => move(index, 1)} aria-label="Move down">↓</Btn>
+                          </>
+                        )}
+                        <span className="flex-1" />
+                        {row.status === "discarded"
+                          ? <Btn variant="danger" disabled={busy} onClick={() => item(def.table, "restore", row.id)}>Restore</Btn>
+                          : row.status && <Btn variant="danger" disabled={busy} onClick={() => item(def.table, "discard", row.id)}>Discard</Btn>}
+                        {def.creatable && (
+                          <Btn variant="danger" disabled={busy}
+                            onClick={() => { if (window.confirm("Delete this item permanently?")) item(def.table, "delete", row.id) }}>Delete</Btn>
+                        )}
+                      </div>
                     </div>
-                  </ItemCard>
-                )}
+                  )
+                })}
 
-                {/* ── JOKES ── */}
-                {activeTab === "jokes" && jokes.map(joke => (
-                  <ItemCard key={joke.id} status={joke.status} aiDraft={isAiDraft(joke.status)}
-                    meta={joke.topic}
-                    actions={<>
-                      {approveBtn("jokes", joke.id, joke.status)}
-                      <Btn onClick={() => saveJoke(joke)}>Save edits</Btn>
-                      {statusActions("jokes", joke.id, joke.status)}
-                    </>}>
-                    <input aria-label="Setup" type="text" value={joke.setup} onChange={e => updateJokeText(joke.id, { setup: e.target.value })} className={`${softInputCls} font-serif text-[17px]`} placeholder="Setup" />
-                    <input aria-label="Punchline" type="text" value={joke.punchline} onChange={e => updateJokeText(joke.id, { punchline: e.target.value })} className={`${softInputCls} font-serif italic text-[17px]`} placeholder="Punchline" />
-                  </ItemCard>
-                ))}
-
-                {/* ── FUN FACTS ── */}
-                {activeTab === "fun_facts" && facts.map(fact => (
-                  <ItemCard key={fact.id} status={fact.status} aiDraft={isAiDraft(fact.status)}
-                    meta={fact.topic}
-                    actions={<>
-                      {approveBtn("fun_facts", fact.id, fact.status)}
-                      <Btn onClick={() => saveFact(fact)}>Save edits</Btn>
-                      {statusActions("fun_facts", fact.id, fact.status)}
-                    </>}>
-                    <textarea aria-label="Fact" value={fact.fact} onChange={e => updateFactText(fact.id, { fact: e.target.value })} rows={2} className={bodyInputCls} />
-                    <input aria-label="Source" type="text" value={fact.source || ""} onChange={e => updateFactText(fact.id, { source: e.target.value })} className={`${softInputCls} font-sans text-base sm:text-sm`} placeholder="Source" />
-                  </ItemCard>
-                ))}
-
-                {/* ── FEATURES ── */}
-                {activeTab === "features" && feature && (
-                  <ItemCard status={feature.status} aiDraft={feature.is_ai_suggested}
-                    actions={<>
-                      {feature.is_ai_suggested && !feature.approved_as_is && (
-                        <Btn variant="approve" onClick={approveAsIsFeature}>Approve as-is</Btn>
-                      )}
-                      {feature.status === "draft" && !feature.is_ai_suggested && (
-                        <Btn variant="approve" onClick={() => setItemStatus("features", feature.id, "approved")}>Approve</Btn>
-                      )}
-                      <Btn onClick={saveFeature}>Save edits</Btn>
-                    </>}>
-                    <input aria-label="Title" type="text" value={feature.title} onChange={e => setFeature({ ...feature, title: e.target.value })} className={titleInputCls} placeholder="Title" />
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <select aria-label="Type" value={feature.type} onChange={e => setFeature({ ...feature, type: e.target.value })} className={`${softInputCls} font-sans text-base sm:text-[15px] sm:w-auto`}>
-                        {FEATURE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                      <input aria-label="Author" type="text" value={feature.author_name} onChange={e => setFeature({ ...feature, author_name: e.target.value })} className={`${softInputCls} font-sans text-base sm:text-[15px] flex-1`} placeholder="Author / byline" />
-                    </div>
-                    <textarea aria-label="Body" value={feature.body_markdown} onChange={e => setFeature({ ...feature, body_markdown: e.target.value })} rows={12} className={bodyInputCls} placeholder="Write in Markdown…" />
-                  </ItemCard>
-                )}
-
-                {/* Section footer */}
-                {!activeRow?.skipped && (
+                {!activeReview?.skipped && !published && (
                   <div className="flex flex-wrap justify-between items-center gap-3 mt-5 pt-4 border-t border-hair">
-                    {SKIPPABLE.includes(activeTab) && !activeRow?.reviewed ? (
-                      <Btn variant="quiet" className="py-3 px-4" onClick={() => skipSection(activeTab)}>Skip this week</Btn>
-                    ) : <span />}
-                    {activeRow?.reviewed ? (
+                    {def.skippable && !activeReview?.reviewed
+                      ? <Btn variant="quiet" className="py-3 px-4" onClick={() => section("skip")}>Skip this week</Btn>
+                      : <span />}
+                    {activeReview?.reviewed ? (
                       <div className="flex items-center gap-3">
                         <span className="font-sans font-bold text-xs tracking-meta uppercase text-accent">Section reviewed ✓</span>
-                        <Btn variant="quiet" onClick={() => reopenSection(activeTab)}>Reopen</Btn>
+                        <Btn variant="quiet" onClick={() => section("reopen")}>Reopen</Btn>
                       </div>
                     ) : (
-                      <BigBtn onClick={() => markReviewed(activeTab)}>Mark section reviewed ✓</BigBtn>
+                      <BigBtn onClick={() => section("reviewed")}>Mark section reviewed ✓</BigBtn>
                     )}
                   </div>
                 )}
@@ -663,6 +351,176 @@ const EditorsDeskPage = () => {
           </>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Region, type and source details shown next to the AI-draft badge. */
+const ItemBadges = ({ section, row }: { section: DeskSection; row: Row }) => {
+  const meta = (text: string) => <span className="font-sans font-medium text-xs text-meta">{text}</span>
+  switch (section) {
+    case "news":
+      return <><RegionPill region={row.region} />{meta([row.source_name, row.topic, row.scraped_at ? `scraped ${formatDate(row.scraped_at, "dayMonth")}` : null].filter(Boolean).join(" · "))}</>
+    case "country_desk":
+      return <><RegionPill region={row.region} />{meta(`${(row.source_urls || []).length} sources · ${(row.source_languages || []).join(", ").toUpperCase() || "no languages"}${row.desk_number ? ` · desk ${row.desk_number}` : ""}`)}</>
+    case "data_drops":
+      return <><RegionPill region={row.region} />{row.link_status === "broken"
+        ? <span className="font-sans font-bold text-[10.5px] tracking-meta uppercase text-danger">Link broken</span>
+        : meta(row.checked_at ? `link ok · checked ${formatDate(row.checked_at, "dayMonth")}` : "link not checked yet")}</>
+    case "gis_story": return <TypePill kind="story" value={row.story_type} />
+    case "maps_dont_lie": return <><TypePill kind="map" value={row.map_type} />{!row.image_url && meta("No image yet. Add one in the Maps tab.")}</>
+    case "events": return <><TypePill kind="event" value={row.event_type} />{meta([formatDate(row.start_date, "short"), row.location].filter(Boolean).join(" · "))}</>
+    case "games": return meta("Check it on the live preview before approving.")
+    default: return row.topic ? meta(row.topic) : null
+  }
+}
+
+/** Editable fields per section. */
+const ItemFields = ({ section, row, val, edit }: {
+  section: DeskSection
+  row: Row
+  val: (row: Row, field: string) => Row[string]
+  edit: (id: string, patch: Row) => void
+}) => {
+  const input = (field: string, cls = smallCls, placeholder = "") => (
+    <input aria-label={field} value={val(row, field)} placeholder={placeholder}
+      onChange={e => edit(row.id, { [field]: e.target.value })} className={cls} />
+  )
+  const area = (field: string, rows = 3, cls = bodyCls) => (
+    <textarea aria-label={field} value={val(row, field)} rows={rows}
+      onChange={e => edit(row.id, { [field]: e.target.value })} className={cls} />
+  )
+  const select = (field: string, options: string[]) => (
+    <select aria-label={field} value={val(row, field)} onChange={e => edit(row.id, { [field]: e.target.value })} className={smallCls}>
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+  )
+
+  switch (section) {
+    case "news":
+      return <div className="flex flex-col gap-2">{input("title", titleCls)}{area("summary")}</div>
+    case "gis_story":
+      return <div className="flex flex-col gap-2">{input("title", titleCls)}{area("content", 14)}</div>
+    case "maps_dont_lie":
+      return (
+        <div className="flex flex-col gap-2">
+          {input("title", titleCls)}
+          {row.image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img loading="lazy" src={row.image_url} alt={row.title} className="w-full max-h-72 object-contain bg-paper-2 border border-hair" />
+          )}
+          {area("commentary", 6)}
+        </div>
+      )
+    case "comics":
+      return (
+        <div className="flex flex-col gap-2">
+          {input("title", titleCls)}
+          {row.image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img loading="lazy" src={row.image_url} alt={row.title} className="w-full border border-hair" />
+          )}
+        </div>
+      )
+    case "games":
+      return <div className="font-display font-semibold text-h3 capitalize">{String(row.game_type).replace(/_/g, " ")}{row.data?.title ? `: ${row.data.title}` : ""}</div>
+    case "events":
+      return (
+        <div className="flex flex-col gap-2">
+          {input("name", titleCls)}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input type="date" aria-label="start_date" value={val(row, "start_date")} onChange={e => edit(row.id, { start_date: e.target.value })} className={smallCls} />
+            {input("location", smallCls, "Location")}
+            {input("url", smallCls, "https://")}
+          </div>
+          {area("description", 2)}
+        </div>
+      )
+    case "data_drops":
+      return (
+        <div className="flex flex-col gap-2">
+          {input("name", titleCls)}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {input("publisher", smallCls, "Publisher")}
+            {input("url", smallCls, "https://")}
+            {select("region", REGIONS)}
+            {select("format", DATASET_FORMATS)}
+            {input("licence", smallCls, "Licence, e.g. CC BY 4.0")}
+            {input("resolution", smallCls, "Resolution, e.g. 10 m or Vector")}
+          </div>
+        </div>
+      )
+    case "country_desk":
+      return <CountryDeskFields row={row} val={val} edit={edit} input={input} area={area} select={select} />
+    case "quote":
+      return (
+        <div className="flex flex-col gap-2">
+          {area("quote_text", 3, `${softInputCls} font-serif italic text-lg leading-[1.45] resize-y`)}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{input("quote_author", smallCls, "Author")}{input("quote_role", smallCls, "Author role")}</div>
+        </div>
+      )
+    case "jokes":
+      return <div className="flex flex-col gap-2">{input("setup", `${softInputCls} font-serif text-[17px]`, "Setup")}{input("punchline", `${softInputCls} font-serif italic text-[17px]`, "Punchline")}</div>
+    case "fun_facts":
+      return <div className="flex flex-col gap-2">{area("fact", 2)}{input("source", smallCls, "Source")}</div>
+    case "features":
+      return (
+        <div className="flex flex-col gap-2">
+          {input("title", titleCls, "Title")}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{select("type", FEATURE_TYPES)}{input("author_name", smallCls, "Author / byline")}</div>
+          {area("body_markdown", 12)}
+        </div>
+      )
+    default:
+      return null
+  }
+}
+
+/** Country desk: intro, up to 5 facts and up to 3 people to follow. */
+const CountryDeskFields = ({ row, val, edit, input, area, select }: {
+  row: Row
+  val: (row: Row, field: string) => Row[string]
+  edit: (id: string, patch: Row) => void
+  input: (field: string, cls?: string, placeholder?: string) => React.ReactNode
+  area: (field: string, rows?: number, cls?: string) => React.ReactNode
+  select: (field: string, options: string[]) => React.ReactNode
+}) => {
+  const facts: { key: string; value: string }[] = val(row, "facts") || []
+  const follow: { name: string; why: string }[] = val(row, "follow") || []
+  const setFact = (i: number, patch: Partial<{ key: string; value: string }>) =>
+    edit(row.id, { facts: facts.map((f, j) => (j === i ? { ...f, ...patch } : f)) })
+  const setFollow = (i: number, patch: Partial<{ name: string; why: string }>) =>
+    edit(row.id, { follow: follow.map((f, j) => (j === i ? { ...f, ...patch } : f)) })
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_200px] gap-2">{input("country", titleCls)}{select("region", REGIONS)}</div>
+      {area("intro", 5)}
+      <div className="font-sans font-semibold text-label tracking-nav uppercase text-meta mt-2">Facts ({facts.length}/5)</div>
+      {facts.map((f, i) => (
+        <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-2">
+          <input aria-label="Fact label" value={f.key} onChange={e => setFact(i, { key: e.target.value })} className={smallCls} placeholder="Open data portal" />
+          <input aria-label="Fact value" value={f.value} onChange={e => setFact(i, { value: e.target.value })} className={smallCls} placeholder="data.egov.uz" />
+          <Btn variant="quiet" onClick={() => edit(row.id, { facts: facts.filter((_, j) => j !== i) })} aria-label="Remove fact">×</Btn>
+        </div>
+      ))}
+      {facts.length < 5 && <Btn className="self-start" onClick={() => edit(row.id, { facts: [...facts, { key: "", value: "" }] })}>+ Fact</Btn>}
+      <div className="font-sans font-semibold text-label tracking-nav uppercase text-meta mt-2">Who to follow ({follow.length}/3)</div>
+      {follow.map((f, i) => (
+        <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-2">
+          <input aria-label="Name" value={f.name} onChange={e => setFollow(i, { name: e.target.value })} className={smallCls} placeholder="Name or organisation" />
+          <input aria-label="Why" value={f.why} onChange={e => setFollow(i, { why: e.target.value })} className={smallCls} placeholder="Why follow them" />
+          <Btn variant="quiet" onClick={() => edit(row.id, { follow: follow.filter((_, j) => j !== i) })} aria-label="Remove">×</Btn>
+        </div>
+      ))}
+      {follow.length < 3 && <Btn className="self-start" onClick={() => edit(row.id, { follow: [...follow, { name: "", why: "" }] })}>+ Person</Btn>}
+      {(row.source_urls || []).length > 0 && (
+        <details className="mt-2 font-sans text-[13px] text-ink-3">
+          <summary className="cursor-pointer text-accent">Original sources ({row.source_urls.length})</summary>
+          <ul className="mt-2 flex flex-col gap-1 break-all">
+            {row.source_urls.map((u: string) => <li key={u}><a href={u} target="_blank" rel="noopener noreferrer" className="hover:text-accent">{u}</a></li>)}
+          </ul>
+        </details>
+      )}
     </div>
   )
 }

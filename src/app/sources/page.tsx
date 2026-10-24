@@ -11,8 +11,7 @@ interface Source {
   id: string
   name: string
   url: string
-  group: string | null
-  group_name?: string | null
+  group_name: string
   description: string | null
   region: string | null
   language: string | null
@@ -27,14 +26,16 @@ const SourcesPage = async () => {
 
   const sources = (error ? [] : data || []) as Source[]
 
-  // Keep groups in the order their first source appears.
+  // Groups appear in the order of their first source; inside a group, by region, then sort order.
   const groups: { name: string; items: Source[] }[] = []
   sources.forEach(s => {
-    const name = s.group ?? s.group_name ?? "Other"
+    const name = s.group_name || "Other"
     const g = groups.find(x => x.name === name)
     if (g) g.items.push(s)
     else groups.push({ name, items: [s] })
   })
+  groups.forEach(g => g.items.sort((a, b) =>
+    (a.region || "").localeCompare(b.region || "") || (a.sort_order ?? 0) - (b.sort_order ?? 0)))
 
   const suggestHref = settings.editorContact ? `mailto:${settings.editorContact}?subject=Source%20suggestion` : "/subscribe"
 

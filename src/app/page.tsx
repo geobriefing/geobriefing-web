@@ -1,8 +1,9 @@
-﻿export const revalidate = 0
+export const revalidate = 0
 
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { getSettings } from "@/lib/settings"
+import { getIssue, latestIssueNumber, type IssueData } from "@/lib/issue"
 import { dateParts, formatDate, pad2, readTime } from "@/lib/format"
 import Masthead from "@/components/Masthead"
 import Footer from "@/components/Footer"
@@ -13,24 +14,32 @@ import {
   QuoteCallout, SectionLabel, SectionRule, TextLink,
 } from "@/components/Editorial"
 
-interface Story { id: string; title: string; summary: string | null; region: string; topic: string | null; source_name: string | null; source_url: string; is_lead: boolean }
-interface Comic { id: string; title: string; image_url: string | null; comic_series: { title: string } | null }
 interface PastIssue { id: string; issue_number: number; slug: string; headline: string; published_at: string | null }
 
+const TOC_TEASER: Record<string, (d: IssueData) => string> = {
+  news: d => {
+    const regions = new Set(d.stories.map(s => s.region)).size
+    return `${d.stories.length} ${d.stories.length === 1 ? "story" : "stories"} from ${regions} ${regions === 1 ? "region" : "regions"}.`
+  },
+  country: d => `${d.countryDesk?.country}, in depth from local-language sources.`,
+  story: d => d.gisStory?.title || "",
+  maps: d => d.map?.title || "",
+  comics: d => d.comics[0]?.title || "",
+  games: d => `${d.gamesTeaser?.thisWeek || "New puzzles this week."}${d.lastWeek ? " Plus last week's answers." : ""}`,
+  events: d => `${d.events.length} upcoming, starting with ${d.events[0]?.name}.`,
+  data: d => `${d.datasets.length} new open ${d.datasets.length === 1 ? "dataset" : "datasets"}, with format and licence.`,
+}
 
 const HomePage = async () => {
-  const [{ data: issue }, settings] = await Promise.all([
-    supabase.from("issues").select("*").eq("status", "published")
-      .order("issue_number", { ascending: false }).limit(1).maybeSingle(),
-    getSettings(),
-  ])
+  const [latest, settings] = await Promise.all([latestIssueNumber(), getSettings()])
+  const d = latest != null ? await getIssue(latest) : null
 
-  if (!issue) {
+  if (!d) {
     return (
       <div className="min-h-screen">
         <Masthead active="this-week" />
         <main className="max-w-5xl mx-auto px-4 sm:px-6 py-16 text-center">
-          <h1 className="font-display font-bold text-display">The first issue is on its way</h1>
+          <h1 className="font-display font-bold text-[30px] sm:text-display">The first issue is on its way</h1>
           <p className="mt-4 font-serif text-lg text-ink-2">Subscribe and it will arrive on {settings.publishDay} afternoon.</p>
           <div className="mt-8"><PrimaryLink href="/subscribe">Subscribe</PrimaryLink></div>
         </main>
@@ -39,49 +48,19 @@ const HomePage = async () => {
     )
   }
 
-  const issueId = issue.id
-  const today = new Date().toISOString().split("T")[0]
-  const [
-    { data: storiesData }, { data: jokesData }, { data: factsData }, { data: gisStory }, { data: mapItem },
-    { data: comicsData }, { data: eventsData }, { data: pastData }, { data: quote }, { data: gamesData },
-  ] = await Promise.all([
-    supabase.from("stories").select("id,title,summary,region,topic,source_name,source_url,is_lead").eq("issue_id", issueId)
-      .order("is_lead", { ascending: false }).order("relevance_score", { ascending: false }),
-    supabase.from("jokes").select("*").eq("issue_id", issueId).limit(1),
-    supabase.from("fun_facts").select("*").eq("issue_id", issueId).limit(1),
-    supabase.from("gis_stories").select("*").eq("issue_id", issueId).limit(1).maybeSingle(),
-    supabase.from("maps_dont_lie").select("*").eq("issue_id", issueId).limit(1).maybeSingle(),
-    supabase.from("comic_strips").select("id, title, image_url, comic_series(title)").eq("issue_id", issueId),
-    supabase.from("events").select("*").eq("is_active", true).gte("start_date", today).order("start_date", { ascending: true }).limit(4),
-    supabase.from("issues").select("id,issue_number,slug,headline,published_at").eq("status", "published")
-      .lt("issue_number", issue.issue_number).order("issue_number", { ascending: false }).limit(5),
-    supabase.from("quotes").select("*").eq("issue_id", issueId).limit(1).maybeSingle(),
-    supabase.from("games").select("id").eq("issue_id", issueId),
-  ])
-
-  const stories = (storiesData || []) as Story[]
-  const comics = (comicsData || []) as unknown as Comic[]
-  const events = eventsData || []
+  const { issue, stories, comics, events, quote, gisStory, countryDesk, datasets } = d
+  const mapItem = d.map
+  const { data: pastData } = await supabase.from("issues").select("id,issue_number,slug,headline,published_at")
+    .eq("status", "published").lt("issue_number", issue.issue_number)
+    .order("issue_number", { ascending: false }).limit(5)
   const past = (pastData || []) as PastIssue[]
-  const joke = jokesData?.[0]
-  const fact = factsData?.[0]
-  const games = gamesData || []
+  const joke = d.jokes[0]
+  const fact = d.facts[0]
   const href = `/issues/${issue.slug}`
+  const minutes = d.readTimeMinutes
 
-  const minutes = readTime([
-    issue.editor_note, ...stories.map(s => s.summary), gisStory?.content, mapItem?.commentary,
-  ])
-  const regions = new Set(stories.map(s => s.region)).size
-
-  // Table of contents: only sections that have content, numbered in issue order.
-  const toc = [
-    stories.length > 0 && { title: "GIS News", teaser: `${stories.length} ${stories.length === 1 ? "story" : "stories"} from ${regions} ${regions === 1 ? "region" : "regions"}.`, anchor: "news" },
-    gisStory && { title: "GIS Story", teaser: gisStory.title, anchor: "story" },
-    mapItem && { title: "Maps Don't Lie", teaser: mapItem.title, anchor: "maps" },
-    comics.length > 0 && { title: "Comics", teaser: comics[0].title, anchor: "comics" },
-    games.length > 0 && { title: "Games", teaser: `${games.length === 1 ? "A new puzzle" : `${games.length} new puzzles`} this week.`, anchor: "games" },
-    events.length > 0 && { title: "Events", teaser: `${events.length} upcoming, starting with ${events[0].name}.`, anchor: "events" },
-  ].filter(Boolean) as { title: string; teaser: string; anchor: string }[]
+  // Table of contents: the issue's own numbered sections, so numbering always matches.
+  const toc = d.sections.map(s => ({ title: s.id === "news" ? "GIS News" : s.title, teaser: TOC_TEASER[s.id](d), anchor: s.id }))
 
   const [lead, ...rest] = stories
   const nextEvent = events[0]
@@ -196,8 +175,41 @@ const HomePage = async () => {
           </>
         )}
 
+        {/* Country desk band */}
+        {countryDesk && (
+          <>
+            <SectionRule />
+            <section className="pt-6 sm:pt-8 pb-8 sm:pb-10">
+              <SectionLabel className="mb-5" aside={
+                <span className="hidden sm:inline font-sans font-medium text-label tracking-meta uppercase text-meta">A different country each week</span>
+              }>Country desk</SectionLabel>
+              <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)] gap-6 md:gap-8 items-start">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <RegionPill region={countryDesk.region} />
+                    {countryDesk.desk_number && <span className="font-mono text-[11px] text-meta">Desk {pad2(countryDesk.desk_number)} of the series</span>}
+                  </div>
+                  <h2 className="mt-3 font-display font-bold text-[34px] sm:text-[44px] leading-none tracking-[-0.015em]">{countryDesk.country}</h2>
+                  <p className="mt-3 mb-4 font-serif text-[17px] leading-[1.6] text-ink-2 text-pretty line-clamp-4">{countryDesk.intro}</p>
+                  <TextLink href={`${href}#country`}>Read the desk →</TextLink>
+                </div>
+                {countryDesk.facts.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 border-t-2 border-ink">
+                    {countryDesk.facts.slice(0, 4).map((f, i) => (
+                      <div key={f.key} className={`py-3.5 border-b border-hair ${i % 2 === 0 ? "sm:pr-4 sm:border-r" : "sm:pl-4"}`}>
+                        <div className="font-sans font-semibold text-label tracking-nav uppercase text-meta">{f.key}</div>
+                        <div className="font-display font-semibold text-[17px] leading-[1.3] mt-1">{f.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          </>
+        )}
+
         {/* Story · Maps · Comics */}
-        {(gisStory || mapItem || comics.length > 0) && (
+        {(gisStory || mapItem || comics.length > 0 || datasets.length > 0) && (
           <>
             <SectionRule />
             <section className="grid grid-cols-1 md:grid-cols-3 pt-6 sm:pt-8 pb-8 sm:pb-10 gap-y-8">
@@ -226,8 +238,9 @@ const HomePage = async () => {
                   <p className="mt-1.5 font-sans text-[15px] sm:text-[14.5px] leading-[1.5] text-ink-3 line-clamp-3">{mapItem.commentary}</p>
                 </div>
               )}
-              {comics.length > 0 && (
+              {(comics.length > 0 || datasets.length > 0) && (
                 <div className={`${gisStory || mapItem ? "md:pl-6 md:border-l md:border-hair" : ""}`}>
+                  {comics.length > 0 && (<>
                   <SectionLabel className="mb-4">Comics</SectionLabel>
                   <Link href={`${href}#comics`} className="grid grid-cols-2 gap-2">
                     {comics.slice(0, 2).map(c => c.image_url ? (
@@ -241,6 +254,24 @@ const HomePage = async () => {
                   <TextLink href={`${href}#comics`} className="mt-3">
                     {comics.length === 1 ? "Read the strip →" : `All ${comics.length} strips →`}
                   </TextLink>
+                  </>)}
+                  {datasets.length > 0 && (
+                    <>
+                      <SectionLabel className={`${comics.length ? "mt-6" : ""} mb-1`}>Data drops</SectionLabel>
+                      {datasets.slice(0, 3).map(x => (
+                        <Link key={x.id} href={`${href}#data`} className="flex justify-between gap-2.5 py-2.5 border-b border-hair text-ink hover:text-accent">
+                          <span>
+                            <span className="block font-display font-semibold text-[15px] leading-[1.3]">{x.name}</span>
+                            {x.publisher && <span className="block font-sans text-[13px] leading-[1.4] text-meta">{x.publisher}</span>}
+                          </span>
+                          <span className="flex-none self-start font-mono font-medium text-[10.5px] leading-none px-1.5 py-1 text-ink bg-paper-2 border border-hair">{x.format}</span>
+                        </Link>
+                      ))}
+                      <TextLink href={`${href}#data`} className="mt-3">
+                        {datasets.length === 1 ? "The dataset →" : `All ${datasets.length} in this issue →`}
+                      </TextLink>
+                    </>
+                  )}
                 </div>
               )}
             </section>
@@ -277,7 +308,7 @@ const HomePage = async () => {
             <Label className="block mb-3 text-[#7FCF9F]!">Subscribe</Label>
             <div className="font-display font-bold text-[30px] sm:text-[40px] leading-[1.05] tracking-[-0.01em]">Free. Every {settings.publishDay}.</div>
             <p className="mt-2 sm:mt-3 font-sans text-[15px] sm:text-base leading-[1.55] text-[#CFCEC6]">
-              One email a week: the news, a story, a map, a comic and a game. No ads. Unsubscribe in one click.
+              One email a week: the news, a country in depth, a story, a map, a comic and a game, with last week&apos;s answers. No ads. Unsubscribe in one click.
             </p>
           </div>
           <SubscribeForm variant="band" publishDay={settings.publishDay} />

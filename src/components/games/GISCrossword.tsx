@@ -30,7 +30,7 @@ const ClueList = ({ title, list }: { title: string; list: CrosswordClue[] }) => 
   </div>
 )
 
-const GISCrossword = ({ data }: { data: CrosswordData }) => {
+const GISCrossword = ({ data, gameId }: { data: CrosswordData; gameId: string }) => {
   const [grid, setGrid] = useState<string[][]>(
     Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(""))
   )
@@ -88,6 +88,14 @@ const GISCrossword = ({ data }: { data: CrosswordData }) => {
     })
     setCorrect(newCorrect)
     setChecked(true)
+    // Count the play anonymously (the server keeps the first attempt per visitor per day).
+    const cells: Record<string, string> = {}
+    grid.forEach((row, r) => row.forEach((v, c) => { if (v) cells[`${r}-${c}`] = v }))
+    fetch("/api/games/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId, choice: { cells } }),
+    }).catch(() => {})
   }
 
   const handleReveal = () => {

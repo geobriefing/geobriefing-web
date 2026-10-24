@@ -34,6 +34,8 @@ const SettingsAdminPage = () => {
   const [editorContact, setEditorContact] = useState("")
   const [publishDay, setPublishDay] = useState("Sunday")
   const [publishTime, setPublishTime] = useState("15:00")
+  const [timezone, setTimezone] = useState("Asia/Karachi")
+  const [fromAddress, setFromAddress] = useState("")
   const [message, setMessage] = useState("")
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -52,8 +54,11 @@ const SettingsAdminPage = () => {
       setEditorMission(s["editor_mission"] || "")
       setEditorContact(s["editor_contact"] || "")
       setCurrentPhoto(s["editor_photo_url"] || "")
-      setPublishDay(s["publish_day"] || "Sunday")
+      const day = (s["publish_day"] || "sunday").toLowerCase()
+      setPublishDay(day.charAt(0).toUpperCase() + day.slice(1))
       setPublishTime(s["publish_time"] || "15:00")
+      setTimezone(s["timezone"] || "Asia/Karachi")
+      setFromAddress(s["from_address"] || "GeoBriefing <onboarding@resend.dev>")
     }
     setLoading(false)
   }
@@ -91,6 +96,12 @@ const SettingsAdminPage = () => {
   }
 
   const handleSave = async () => {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: timezone })
+    } catch {
+      setMessage(`Error: "${timezone}" is not a valid timezone.`)
+      return
+    }
     setSaving(true)
     setMessage("")
     try {
@@ -99,8 +110,10 @@ const SettingsAdminPage = () => {
         supabase.from("site_settings").upsert({ id: "editor_bio", value: editorBio }),
         supabase.from("site_settings").upsert({ id: "editor_mission", value: editorMission }),
         supabase.from("site_settings").upsert({ id: "editor_contact", value: editorContact }),
-        supabase.from("site_settings").upsert({ id: "publish_day", value: publishDay }),
+        supabase.from("site_settings").upsert({ id: "publish_day", value: publishDay.toLowerCase() }),
         supabase.from("site_settings").upsert({ id: "publish_time", value: publishTime }),
+        supabase.from("site_settings").upsert({ id: "timezone", value: timezone }),
+        supabase.from("site_settings").upsert({ id: "from_address", value: fromAddress }),
       ])
       const failed = results.find(r => r.error)
       if (failed?.error) throw failed.error
@@ -133,8 +146,14 @@ const SettingsAdminPage = () => {
               {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </Row>
-          <Row label="Publish time" hint="Asia/Karachi">
+          <Row label="Publish time" hint={`In ${timezone}`}>
             <input type="time" value={publishTime} onChange={e => setPublishTime(e.target.value)} className={inputCls} />
+          </Row>
+          <Row label="Timezone" hint="IANA name, e.g. Asia/Karachi">
+            <input type="text" value={timezone} onChange={e => setTimezone(e.target.value)} className={inputCls} />
+          </Row>
+          <Row label="From address" hint="Sender for the newsletter. Needs a domain verified in Resend.">
+            <input type="text" value={fromAddress} onChange={e => setFromAddress(e.target.value)} className={inputCls} />
           </Row>
 
           <GroupLabel>The editor</GroupLabel>
@@ -167,7 +186,7 @@ const SettingsAdminPage = () => {
             <textarea value={editorMission} onChange={e => setEditorMission(e.target.value)} rows={3}
               placeholder="Why did you start this? What gap does it fill?" className={`${inputCls} resize-y`} />
           </Row>
-          <Row label="Contact email" hint="Used for replies and source suggestions">
+          <Row label="Contact email" hint="Reply-To for every email, and where test emails go">
             <input type="email" value={editorContact} onChange={e => setEditorContact(e.target.value)} className={inputCls} />
           </Row>
 

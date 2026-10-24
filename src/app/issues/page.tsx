@@ -1,33 +1,15 @@
 ﻿export const revalidate = 0
 
 import Link from "next/link"
-import { supabase } from "@/lib/supabase"
+import { getArchive } from "@/lib/issue"
 import { formatDate } from "@/lib/format"
 import Masthead from "@/components/Masthead"
 import Footer from "@/components/Footer"
 import { Label, Meta, PrimaryLink } from "@/components/Editorial"
 
-interface ArchiveIssue { id: string; issue_number: number; slug: string; headline: string; published_at: string | null }
-
 const IssuesPage = async () => {
-  const { data } = await supabase
-    .from("issues")
-    .select("id, issue_number, slug, headline, published_at")
-    .eq("status", "published")
-    .order("issue_number", { ascending: false })
-
-  const issues = (data || []) as ArchiveIssue[]
-
-  // Group by month of publication, newest first.
-  const groups: { month: string; items: ArchiveIssue[] }[] = []
-  issues.forEach(issue => {
-    const month = formatDate(issue.published_at, "monthYear") || "Undated"
-    const last = groups[groups.length - 1]
-    if (last && last.month === month) last.items.push(issue)
-    else groups.push({ month, items: [issue] })
-  })
-
-  const first = issues[issues.length - 1]
+  const { groups, totalIssues, firstIssueDate } = await getArchive()
+  const issues = groups.flatMap(g => g.items)
 
   return (
     <div className="min-h-screen">
@@ -41,8 +23,8 @@ const IssuesPage = async () => {
           </div>
           {issues.length > 0 && (
             <Meta>
-              {issues.length} {issues.length === 1 ? "issue" : "issues"}
-              {first?.published_at ? ` since ${formatDate(first.published_at, "monthYear")}` : ""}
+              {totalIssues} {totalIssues === 1 ? "issue" : "issues"}
+              {firstIssueDate ? ` since ${formatDate(firstIssueDate, "monthYear")}` : ""}
             </Meta>
           )}
         </div>

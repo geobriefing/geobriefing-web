@@ -5,13 +5,14 @@ import { TypePill } from "@/components/Pills"
 import { AdminLoading, AdminTitle, Btn, Field, Notice, StatusText, inputCls, softInputCls } from "@/components/AdminUI"
 import { supabase } from "@/lib/supabase"
 import { useAdminAuth } from "@/lib/useAdminAuth"
+import SourcesEditor from "@/components/SourcesEditor"
 
 interface Issue { id: string; issue_number: number; headline: string; editor_note: string | null; status: string }
 interface Joke { id: string; setup: string; punchline: string; topic: string }
 interface Fact { id: string; fact: string; source: string; topic: string }
 interface Story { id: string; title: string; content: string; story_type: string; status: string }
 
-type Tab = "editorial" | "jokes" | "facts" | "stories"
+type Tab = "editorial" | "jokes" | "facts" | "stories" | "sources"
 
 const ContentAdminPage = () => {
   const { ready, logout } = useAdminAuth()
@@ -82,6 +83,7 @@ const ContentAdminPage = () => {
     { key: "jokes", label: "Jokes", count: jokes.length },
     { key: "facts", label: "Facts", count: facts.length },
     { key: "stories", label: "Stories", count: stories.length },
+    { key: "sources", label: "Sources", count: -1 },
   ]
 
   return (
@@ -97,12 +99,14 @@ const ContentAdminPage = () => {
                   className={`min-h-11 sm:min-h-0 font-sans font-semibold text-label px-2.5 py-1.5 border cursor-pointer ${
                     tab === t.key ? "bg-ink text-paper border-ink" : "border-hair-2 text-ink hover:border-ink"
                   }`}>
-                  {t.label} {t.count}
+                  {t.label}{t.count >= 0 ? ` ${t.count}` : ""}
                 </button>
               ))}
             </div>
           } />
           <Notice message={message} />
+
+          {tab === "sources" && <SourcesEditor />}
 
           {tab === "editorial" && (
             <div className="flex flex-col gap-4 mt-5">

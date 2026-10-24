@@ -1,6 +1,6 @@
 /**
  * Welcome email. Table-based, 600px, Georgia and Arial only, inline styles.
- * The wordmark is live text with a green "o" until a 2x PNG of the logo is hosted.
+ * The wordmark is a 2x PNG with "GeoBriefing" as its alt text.
  */
 
 const esc = (s: string) =>
@@ -16,10 +16,10 @@ const INCLUDES: [string, string][] = [
 ]
 
 export const welcomeEmail = ({
-  siteUrl, email, publishDay, editorName, contactEmail,
+  siteUrl, unsubscribeUrl, publishDay, editorName, contactEmail,
 }: {
   siteUrl: string
-  email: string
+  unsubscribeUrl: string
   publishDay: string
   editorName: string
   contactEmail: string
@@ -41,7 +41,7 @@ export const welcomeEmail = ({
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;border-collapse:collapse;background:#FAFAF7;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a">
 <tr><td style="padding:24px 32px 0"><div style="border-top:4px solid #1a1a1a;height:3px;font-size:0;line-height:0">&nbsp;</div><div style="border-top:1px solid #1a1a1a;font-size:0;line-height:0">&nbsp;</div></td></tr>
 <tr><td align="center" style="padding:18px 32px 14px;border-bottom:1px solid #1a1a1a">
-<span style="font:bold 34px/1 Georgia,serif;letter-spacing:-0.5px;color:#1a1a1a">Ge<span style="color:#1a6b3c">o</span>Briefing</span>
+<img src="${siteUrl}/email/wordmark@2x.png" width="280" height="56" alt="GeoBriefing" style="display:block;margin:0 auto;border:0;width:280px;max-width:100%;height:auto;font:bold 34px Georgia,serif;color:#1a1a1a">
 <div style="font:bold 8px Arial,sans-serif;letter-spacing:4px;margin-top:10px;color:#1a1a1a">SPATIAL INTELLIGENCE · WEEKLY</div>
 </td></tr>
 <tr><td style="padding:36px 32px 0">
@@ -59,7 +59,7 @@ ${rows}
 </td></tr>
 <tr><td align="center" style="padding:32px;font:12px/1.6 Arial,sans-serif;color:#66665f"><div style="border-top:1px solid #dddcd5;padding-top:16px">
 GeoBriefing · Free weekly GIS intelligence<br>
-<a href="${siteUrl}/unsubscribe?email=${encodeURIComponent(email)}" style="color:#66665f">Unsubscribe</a>
+<a href="${unsubscribeUrl}" style="color:#66665f">Unsubscribe</a>
 </div></td></tr>
 </table>
 </td></tr></table>

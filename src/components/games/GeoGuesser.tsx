@@ -3,9 +3,6 @@ import { useEffect, useRef, useState } from "react"
 import { SectionLabel } from "@/components/Editorial"
 
 interface GeoGuesserData {
-  lat: number
-  lon: number
-  name: string
   hint: string
   region: string
 }
@@ -13,11 +10,15 @@ interface GeoGuesserData {
 const pinHtml = (color: string, size: number) =>
   `<div style="width:${size}px;height:${size}px;background:${color};border-radius:50%;border:3px solid #FAFAF7;box-shadow:0 0 0 1px #1A1A1A"></div>`
 
-const GeoGuesser = ({ data }: { data: GeoGuesserData }) => {
+/** The location is not in the page: /api/games/play scores the pin and returns the answer. */
+const GeoGuesser = ({ data, gameId }: { data: GeoGuesserData; gameId: string }) => {
   const mapRef = useRef<HTMLDivElement>(null)
   const [guess, setGuess] = useState<{ lat: number; lon: number } | null>(null)
   const [revealed, setRevealed] = useState(false)
   const [distance, setDistance] = useState<number | null>(null)
+  const [answerName, setAnswerName] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
   const [mapLoaded, setMapLoaded] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const leafletRef = useRef<any>(null)
@@ -77,32 +78,40 @@ const GeoGuesser = ({ data }: { data: GeoGuesserData }) => {
     return () => window.removeEventListener("resize", handleResize)
   }, [mapLoaded])
 
-  const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371
-    const dLat = (lat2 - lat1) * Math.PI / 180
-    const dLon = (lon2 - lon1) * Math.PI / 180
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  }
+  const handleReveal = async () => {
+    if (!guess || !leafletRef.current || !mapInstanceRef.current || busy) return
+    setBusy(true)
+    setError("")
+    try {
+      const res = await fetch("/api/games/play", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gameId, choice: { lat: guess.lat, lng: guess.lon } }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Could not check your guess")
+      const answer = json.reveal.answer as { lat: number; lng: number; name: string }
+      const L = leafletRef.current
+      const map = mapInstanceRef.current
+      setDistance(Math.round(json.distanceKm))
+      setAnswerName(answer.name)
+      setRevealed(true)
+      revealedRef.current = true
 
-  const handleReveal = () => {
-    if (!guess || !leafletRef.current || !mapInstanceRef.current) return
-    const L = leafletRef.current
-    const map = mapInstanceRef.current
-    const dist = haversineDistance(guess.lat, guess.lon, data.lat, data.lon)
-    setDistance(Math.round(dist))
-    setRevealed(true)
-    revealedRef.current = true
+      L.marker([answer.lat, answer.lng], {
+        icon: L.divIcon({ html: pinHtml("#A8321E", 18), className: "", iconSize: [18, 18], iconAnchor: [9, 9] })
+      }).addTo(map).bindPopup(answer.name).openPopup()
 
-    L.marker([data.lat, data.lon], {
-      icon: L.divIcon({ html: pinHtml("#A8321E", 18), className: "", iconSize: [18, 18], iconAnchor: [9, 9] })
-    }).addTo(map).bindPopup(data.name).openPopup()
+      L.polyline([[guess.lat, guess.lon], [answer.lat, answer.lng]], {
+        color: "#1A6B3C", dashArray: "5,8", weight: 2
+      }).addTo(map)
 
-    L.polyline([[guess.lat, guess.lon], [data.lat, data.lon]], {
-      color: "#1A6B3C", dashArray: "5,8", weight: 2
-    }).addTo(map)
-
-    map.fitBounds([[guess.lat, guess.lon], [data.lat, data.lon]], { padding: [40, 40] })
+      map.fitBounds([[guess.lat, guess.lon], [answer.lat, answer.lng]], { padding: [40, 40] })
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   const score = distance !== null
@@ -121,19 +130,19 @@ const GeoGuesser = ({ data }: { data: GeoGuesserData }) => {
             <button
               type="button"
               onClick={handleReveal}
-              disabled={!guess}
+              disabled={!guess || busy}
               className="w-full sm:w-auto min-h-11 font-sans font-semibold text-xs leading-none tracking-button uppercase bg-ink text-paper px-5 py-3.5 hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
-              Submit guess
+              {busy ? "Checking…" : "Submit guess"}
             </button>
             <span className="font-sans text-[13.5px] text-meta">
-              {guess ? "Pin dropped. Move it by clicking again." : "No pin yet. Click the map."}
+              {error || (guess ? "Pin dropped. Move it by clicking again." : "No pin yet. Click the map.")}
             </span>
           </div>
         ) : (
           <div className="border-t-2 border-ink bg-paper-2 px-4 pt-3.5 pb-4" aria-live="polite">
             <div className="font-display font-bold text-[19px] leading-[1.25]">{score}: {distance?.toLocaleString()} km away</div>
-            <p className="font-sans text-[15px] sm:text-sm text-ink-3 mt-1">The answer was <b className="text-ink">{data.name}</b>.</p>
+            <p className="font-sans text-[15px] sm:text-sm text-ink-3 mt-1">The answer was <b className="text-ink">{answerName}</b>.</p>
           </div>
         )}
       </div>

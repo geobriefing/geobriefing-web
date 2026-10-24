@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     return [
       // Jobs were replaced by Data drops.
       { source: "/jobs", destination: "/", statusCode: 301 },
+      { source: "/jobs/:path*", destination: "/", statusCode: 301 },
     ];
   },
 };
