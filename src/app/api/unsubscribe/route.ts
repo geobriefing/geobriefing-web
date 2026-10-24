@@ -9,7 +9,10 @@ const unsubscribe = async (req: NextRequest) => {
   if (!email || !verifyUnsubscribe(email, token)) {
     return NextResponse.json({ error: "Invalid unsubscribe link" }, { status: 400 })
   }
-  await supabaseAdmin().from("subscribers").update({ status: "unsubscribed" }).eq("email", email.toLowerCase().trim())
+  // Only active readers change: a bounced or complained address keeps that status.
+  await supabaseAdmin().from("subscribers")
+    .update({ status: "unsubscribed", status_changed_at: new Date().toISOString() })
+    .eq("email", email.toLowerCase().trim()).eq("status", "active")
   return req.method === "POST"
     ? NextResponse.json({ ok: true })
     : NextResponse.redirect(new URL("/unsubscribed", req.url), 303)

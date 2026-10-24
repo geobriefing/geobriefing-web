@@ -23,6 +23,7 @@ const TOC_TEASER: Record<string, (d: IssueData) => string> = {
   },
   country: d => `${d.countryDesk?.country}, in depth from local-language sources.`,
   story: d => d.gisStory?.title || "",
+  feature: d => `${d.feature?.type}: ${d.feature?.title}`,
   maps: d => d.map?.title || "",
   comics: d => d.comics[0]?.title || "",
   games: d => `${d.gamesTeaser?.thisWeek || "New puzzles this week."}${d.lastWeek ? " Plus last week's answers." : ""}`,
@@ -82,7 +83,7 @@ const HomePage = async () => {
               {formatDate(issue.published_at, "weekday")} · {minutes} min read
               {stories.length > 0 && ` · ${stories.length} ${stories.length === 1 ? "story" : "stories"}`}
             </Meta>
-            {quote && <QuoteCallout text={quote.quote_text} author={quote.quote_author} role={quote.quote_role} className="my-5 sm:my-[26px]" />}
+            {quote && <QuoteCallout text={quote.quote_text} author={quote.quote_author} role={quote.quote_role} sourceUrl={quote.source_url} className="my-5 sm:my-[26px]" />}
             {issue.editor_note && (
               <div className={quote ? "" : "mt-5 sm:mt-[26px]"}>
                 <EditorNote note={issue.editor_note} name={settings.editorName} photoUrl={settings.editorPhotoUrl} />
@@ -152,7 +153,7 @@ const HomePage = async () => {
               {(joke || fact || nextEvent) && (
                 <aside className="mt-6 md:mt-0 md:border-l md:border-hair md:pl-7 flex flex-col gap-7">
                   {joke && <JokeCallout setup={joke.setup} punchline={joke.punchline} />}
-                  {fact && <FactBox fact={fact.fact} source={fact.source} />}
+                  {fact && <FactBox fact={fact.fact} source={fact.source} sourceUrl={fact.source_url} />}
                   {nextEvent && (
                     <div>
                       <SectionLabel className="mb-3.5">Next event</SectionLabel>

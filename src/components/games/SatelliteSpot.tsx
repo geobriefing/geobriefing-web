@@ -6,6 +6,7 @@ interface SatelliteSpotData {
   image_url: string
   options: string[]
   use_embed: boolean
+  image_credit?: string
 }
 
 type Pick = { option: string; correct: boolean }
@@ -46,6 +47,7 @@ const SatelliteSpot = ({ data, gameId, publishDay }: { data: SatelliteSpotData; 
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+      <figure>
       <div className="aspect-square bg-paper-2 border border-hair overflow-hidden">
         {!data.image_url ? (
           <div className="w-full h-full hatch flex items-end p-3">
@@ -58,6 +60,8 @@ const SatelliteSpot = ({ data, gameId, publishDay }: { data: SatelliteSpotData; 
           <img loading="lazy" src={data.image_url} alt="Satellite view of the place to identify" className="w-full h-full object-cover" />
         )}
       </div>
+      {data.image_credit && <figcaption className="font-sans text-xs leading-[1.4] text-meta mt-1.5">Image: {data.image_credit}</figcaption>}
+      </figure>
       <div>
         <SectionLabel className="mb-3">Satellite Spot</SectionLabel>
         <h3 className="font-display font-semibold text-xl sm:text-[22px] leading-[1.25] mb-4">Where on Earth is this?</h3>

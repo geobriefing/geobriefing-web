@@ -2,6 +2,7 @@ import Link from "next/link"
 import Wordmark from "@/components/Wordmark"
 import { supabase } from "@/lib/supabase"
 import { formatDate } from "@/lib/format"
+import { siteHost } from "@/lib/site"
 
 export type NavKey = "this-week" | "all-issues" | "about" | "sources" | "subscribe"
 
@@ -34,7 +35,7 @@ const Masthead = async ({ active, maxWidth = "max-w-5xl" }: { active?: NavKey; m
       <div className="flex justify-between items-center gap-4 py-[7px] sm:py-[9px] font-sans font-semibold text-[9.5px] sm:text-label leading-[1.2] tracking-nav sm:tracking-button uppercase">
         <span className="sm:hidden">{issueLineShort}</span>
         <span className="hidden sm:inline">{issueLine}</span>
-        <span className="text-meta font-medium normal-case tracking-[.04em] sm:tracking-[.06em] text-[10.5px] sm:text-xs">geobriefing.com</span>
+        <span className="text-meta font-medium normal-case tracking-[.04em] sm:tracking-[.06em] text-[10.5px] sm:text-xs">{siteHost()}</span>
       </div>
 
       <div className="border-y border-ink pt-3.5 pb-[11px] sm:pt-[22px] sm:pb-4 flex flex-col items-center">

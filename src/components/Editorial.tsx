@@ -82,11 +82,12 @@ export const EditorNote = ({
 
 /** Ink-bar pull quote. */
 export const QuoteCallout = ({
-  text, author, role, size = "md", className = "",
+  text, author, role, sourceUrl, size = "md", className = "",
 }: {
   text: string
   author?: string | null
   role?: string | null
+  sourceUrl?: string | null
   size?: "md" | "lg"
   className?: string
 }) => (
@@ -96,7 +97,9 @@ export const QuoteCallout = ({
     </p>
     {author && (
       <div className="font-sans font-semibold text-label tracking-nav uppercase text-meta mt-2.5">
-        Quote of the week · {author}{role ? `, ${role}` : ""}
+        Quote of the week · {sourceUrl
+          ? <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="hover:text-accent">{author}{role ? `, ${role}` : ""} ↗</a>
+          : <>{author}{role ? `, ${role}` : ""}</>}
       </div>
     )}
   </div>
@@ -120,11 +123,12 @@ export const JokeCallout = ({
 
 /** Sunken fact box with a 2px top rule. */
 export const FactBox = ({
-  label = "Did you know?", fact, source, figure, className = "",
+  label = "Did you know?", fact, source, sourceUrl, figure, className = "",
 }: {
   label?: string
   fact: string
   source?: string | null
+  sourceUrl?: string | null
   figure?: string
   className?: string
 }) => (
@@ -132,7 +136,11 @@ export const FactBox = ({
     <Label className="block mb-2.5">{label}</Label>
     {figure && <div className="font-display font-bold text-[30px] sm:text-4xl leading-none mb-2">{figure}</div>}
     <p className="font-sans text-[15px] leading-[1.5] text-ink-2">{fact}</p>
-    {source && <div className="font-sans text-[13px] text-meta mt-1.5">— {source}</div>}
+    {source && (
+      <div className="font-sans text-[13px] text-meta mt-1.5">
+        — {sourceUrl ? <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="hover:text-accent">{source} ↗</a> : source}
+      </div>
+    )}
   </div>
 )
 

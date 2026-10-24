@@ -5,6 +5,7 @@ import { getSettings } from "@/lib/settings"
 import { gamesTeaserFrom, getLastWeekAnswers } from "@/lib/issue"
 import { nextPublishSlot } from "@/lib/schedule"
 import { DESK_SECTIONS } from "@/lib/deskSections"
+import { issueEmailProgress, quotaLeft } from "@/lib/emailQueue"
 
 /**
  * Everything the Editor's Desk shows for one issue (?issueId=, default: the
@@ -69,6 +70,10 @@ export const GET = async (req: NextRequest) => {
       : Promise.resolve({ count: 0 }),
   ])
 
+  const email = issue.email_sent_at
+    ? { ...(await issueEmailProgress(issue.id)), quotaLeft: await quotaLeft() }
+    : null
+
   const gameRows = games.data || []
   const has = (t: string) => gameRows.some(g => g.game_type === t && g.status === "approved")
   const teaser = gamesTeaserFrom(lastWeek, {
@@ -105,6 +110,7 @@ export const GET = async (req: NextRequest) => {
       replyCount: replyCount || 0,
       lastIssueReplyCount: lastReplyCount || 0,
     },
+    email,
     schedule: {
       publishDay: settings.publishDay,
       publishTime: settings.publishTime,

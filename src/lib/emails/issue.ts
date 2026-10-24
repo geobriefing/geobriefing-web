@@ -72,7 +72,15 @@ export const renderIssueEmail = (d: IssueData, s: SiteSettings, opts: { unsubscr
     parts.push(row(`<div style="border-bottom:1px solid #1a1a1a;font-size:0">${cells.join("")}</div>`, "16px 32px 0"))
   }
 
-  parts.push(row(`${label("This week's briefing")}<h1 style="margin:10px 0 0;font:bold 30px/1.12 Georgia,serif;color:#1a1a1a">${esc(d.issue.headline)}</h1>`, "28px 32px 0"))
+  parts.push(row(`${label("This week's briefing")}<h1 style="margin:10px 0 0;font:bold 32px/1.1 Georgia,serif;color:#1a1a1a;letter-spacing:-0.3px">${esc(d.issue.headline)}</h1>`, "28px 32px 0"))
+
+  // The week in 60 seconds: the top stories as one-line bullets, for readers who stop here.
+  const top = d.stories.slice(0, 4)
+  if (top.length) {
+    parts.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:2px solid #1a1a1a;border-bottom:2px solid #1a1a1a"><tr><td style="padding:14px 0 6px">${label("The week in 60 seconds")}</td></tr>
+${top.map(st => `<tr><td style="padding:7px 0;font:15px/1.45 Arial,sans-serif;color:#2b2b28"><span style="color:#1a6b3c;font-weight:bold">&#9632;</span>&nbsp; <a href="${issueUrl}#story-${st.id}" style="color:#1a1a1a;text-decoration:none"><b>${esc(st.title)}</b></a>${st.region ? ` <span style="color:#66665f">· ${esc(st.region)}</span>` : ""}</td></tr>`).join("")}
+<tr><td style="padding:0 0 10px"></td></tr></table>`, "20px 32px 0"))
+  }
 
   if (d.quote) {
     parts.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="border-left:3px solid #1a1a1a;padding:2px 0 2px 16px;font:italic 19px/1.4 Georgia,serif;color:#1a1a1a">&ldquo;${esc(d.quote.quote_text)}&rdquo;
@@ -89,7 +97,7 @@ export const renderIssueEmail = (d: IssueData, s: SiteSettings, opts: { unsubscr
 <td style="padding-left:10px;font:13px/1.4 Arial,sans-serif;color:#4a4a45">${s.editorName ? `<b style="color:#1a1a1a">${esc(s.editorName)}</b><br>` : ""}Hit reply. I read every email.</td></tr></table></td></tr></table>`, "20px 32px 0"))
   }
 
-  parts.push(row(`<a href="${issueUrl}" style="display:inline-block;background:#1a1a1a;color:#FAFAF7;font:bold 12px Arial,sans-serif;letter-spacing:2px;text-decoration:none;padding:14px 20px">READ ON THE WEB &rarr;</a>`, "22px 32px 0"))
+  parts.push(row(`<a href="${issueUrl}" style="display:inline-block;background:#1a1a1a;color:#FAFAF7;font:bold 12px Arial,sans-serif;letter-spacing:2px;text-decoration:none;padding:14px 20px">READ THE FULL ISSUE &rarr;</a>`, "22px 32px 0"))
 
   // 01 News
   const news = n("news")
@@ -116,15 +124,25 @@ ${c.facts.length ? `<table role="presentation" width="100%" cellpadding="0" cell
 <div style="margin-top:10px"><a href="${issueUrl}#country" style="font:bold 11px Arial,sans-serif;letter-spacing:1.5px;color:#1a6b3c;text-decoration:none">READ THE DESK &rarr;</a></div>`, "12px 32px 0"))
   }
 
-  // Also in this issue: one line each for the remaining sections.
+  // Games: a bold call to play, with last week's answer as the hook.
+  if (n("games")) {
+    const g = d.gamesTeaser
+    parts.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#1a6b3c"><tr><td style="padding:22px 22px">
+<div style="font:bold 10px Arial,sans-serif;letter-spacing:2px;color:#cfe6d8">THIS WEEK'S GAMES</div>
+<div style="font:bold 24px/1.2 Georgia,serif;color:#ffffff;margin-top:6px">Can you name it from space?</div>
+<p style="margin:8px 0 16px;font:14px/1.5 Arial,sans-serif;color:#e6f4ec">${g?.lastAnswer ? `Last week it was <b style="color:#ffffff">${esc(g.lastAnswer)}</b>${g.pctCorrect != null ? ` and only ${g.pctCorrect}% got it` : ""}. ` : ""}Satellite Spot, GeoGuesser and the GIS crossword. Two minutes each.</p>
+<a href="${issueUrl}#games" style="display:inline-block;background:#FAFAF7;color:#1a1a1a;font:bold 12px Arial,sans-serif;letter-spacing:2px;text-decoration:none;padding:13px 20px">PLAY NOW &rarr;</a></td></tr></table>`, "28px 32px 0"))
+  }
+
+  // Also inside: one line each for the remaining sections.
   const also: [string, string, string][] = []
   if (n("story") && d.gisStory) also.push(["GIS Story", d.gisStory.title, "story"])
+  if (n("feature") && d.feature) also.push([d.feature.type, `${d.feature.title}, by ${d.feature.author_name}`, "feature"])
   if (n("maps") && d.map) also.push(["Maps Don't Lie", d.map.title, "maps"])
   if (n("comics")) also.push(["Comics", d.comics[0]?.title || "", "comics"])
-  if (n("games")) also.push(["Games", d.gamesTeaser?.thisWeek || "This week's puzzles", "games"])
   if (n("events")) also.push(["Events", `${d.events.length} upcoming, starting with ${d.events[0]?.name}`, "events"])
   if (also.length) {
-    parts.push(row(`<div style="border-top:2px solid #1a1a1a;font-size:0;line-height:0">&nbsp;</div><div style="padding-top:10px">${label("Also in this issue")}</div>`, "32px 32px 0"))
+    parts.push(row(`<div style="border-top:2px solid #1a1a1a;font-size:0;line-height:0">&nbsp;</div><div style="padding-top:10px">${label("Also inside")}</div>`, "32px 32px 0"))
     also.forEach(([title, teaser, anchor]) => parts.push(`<tr><td style="padding:12px 32px;border-bottom:1px solid #dddcd5"><a href="${issueUrl}#${anchor}" style="text-decoration:none;color:#1a1a1a"><span style="font:bold 16px Georgia,serif">${esc(title)}</span> <span style="font:14px Arial,sans-serif;color:#4a4a45">— ${esc(teaser)}</span></a></td></tr>`))
   }
 
@@ -149,8 +167,8 @@ ${lw.games.map(g => `<div style="margin-top:10px;font:14px/1.45 Arial,sans-serif
   // Reply to play
   if (d.issue.reply_prompt) {
     parts.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:2px solid #1a1a1a"><tr><td style="padding:18px 20px">${label("Reply to play")}
-<div style="font:bold 19px/1.3 Georgia,serif;margin-top:6px;color:#1a1a1a">Guess next week's country desk.</div>
-<p style="margin:6px 0 0;font:14px/1.5 Arial,sans-serif;color:#2b2b28">${esc(d.issue.reply_prompt)} Reply to this email with your guess.</p></td></tr></table>`, "28px 32px 0"))
+<div style="font:bold 20px/1.3 Georgia,serif;margin-top:6px;color:#1a1a1a">Guess next week's country desk.</div>
+<p style="margin:6px 0 0;font:14px/1.5 Arial,sans-serif;color:#2b2b28">${esc(d.issue.reply_prompt)} <b>Hit reply with your guess.</b> One word is enough.</p></td></tr></table>`, "28px 32px 0"))
   }
 
   if (d.issue.teaser) {
@@ -158,22 +176,28 @@ ${lw.games.map(g => `<div style="margin-top:10px;font:14px/1.45 Arial,sans-serif
   }
 
   parts.push(row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#1a1a1a"><tr><td align="center" style="padding:28px 24px;color:#FAFAF7">
-<div style="font:bold 22px Georgia,serif">Forward this to a colleague</div>
-<p style="margin:8px 0 16px;font:14px/1.5 Arial,sans-serif;color:#cfcec6">GeoBriefing is free and has no ads. It grows by word of mouth.</p>
-<a href="${site}/subscribe" style="display:inline-block;background:#1a6b3c;color:#ffffff;font:bold 12px Arial,sans-serif;letter-spacing:2px;text-decoration:none;padding:13px 20px">SHARE GEOBRIEFING</a></td></tr></table>`, "32px"))
+<div style="font:bold 24px Georgia,serif">Know a map nerd? Forward this.</div>
+<p style="margin:8px 0 16px;font:14px/1.5 Arial,sans-serif;color:#cfcec6">GeoBriefing is free, has no ads and grows only by word of mouth. One forward is the best thanks.</p>
+<a href="${site}/subscribe" style="display:inline-block;background:#1a6b3c;color:#ffffff;font:bold 12px Arial,sans-serif;letter-spacing:2px;text-decoration:none;padding:13px 20px">SEND THEM THE SIGN-UP LINK</a></td></tr></table>`, "32px"))
 
-  parts.push(`<tr><td align="center" style="padding:0 32px 32px;font:12px/1.6 Arial,sans-serif;color:#66665f">You get this because you subscribed at geobriefing.com.<br>
+  parts.push(`<tr><td align="center" style="padding:0 32px 32px;font:12px/1.6 Arial,sans-serif;color:#66665f">You get this because you subscribed at ${esc(site.replace(/^https?:\/\//, ""))}.<br>
 <a href="${opts.unsubscribeUrl}" style="color:#66665f">Unsubscribe</a> · <a href="${issueUrl}" style="color:#66665f">View in browser</a></td></tr>`)
+
+  // Inbox preview line: the must-read, then what else is waiting.
+  const extras = [d.stories.find(st => st.id !== d.mustRead?.id)?.title, n("games") && "this week's games"].filter(Boolean)
+  const lead = (d.mustRead?.title || d.issue.headline).replace(/[.!?]$/, "")
+  const preheader = extras.length ? `${lead}. Plus: ${extras.join(" and ")}.` : `${lead}.`
 
   const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(d.issue.headline)}</title></head>
 <body style="margin:0;padding:0;background:#e6e5df">
-<div style="display:none;max-height:0;overflow:hidden">${esc(d.mustRead?.title || d.issue.headline)}</div>
+<div style="display:none;max-height:0;overflow:hidden">${esc(preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#e6e5df"><tr><td align="center" style="padding:16px 0">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;border-collapse:collapse;background:#FAFAF7;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a">
 ${parts.join("\n")}
 </table></td></tr></table></body></html>`
 
-  const subject = `Issue #${d.issue.issue_number}: ${d.issue.headline}`
+  // "#12" stays in the subject: replies are matched to the issue by it.
+  const subject = `${d.issue.headline} · GeoBriefing #${d.issue.issue_number}`
   return { subject, html }
 }

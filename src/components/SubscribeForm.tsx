@@ -1,11 +1,20 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 
 type Variant = "band" | "inline" | "page"
 type Status = "idle" | "loading" | "success" | "error"
 
-const subscribe = async (email: string, name: string): Promise<{ ok: boolean; message?: string }> => {
+const ERRORS: Record<string, string> = {
+  too_fast: "That was quick. Please try again.",
+  invalid_email: "That address looks incomplete.",
+  domain_no_mail: "That email domain doesn't accept mail. Check the spelling?",
+  rate_limited: "Too many signups from here today. Try again tomorrow.",
+  blocked: "We can't send to that address. Try another one.",
+}
+
+/** `website` is the hidden honeypot; `t` is when the form appeared (bots submit instantly). */
+const subscribe = async (email: string, name: string, website: string, t: number): Promise<{ ok: boolean; message?: string }> => {
   if (!email || !email.includes("@") || !email.split("@")[1]?.includes(".")) {
     return { ok: false, message: "That address looks incomplete." }
   }
@@ -13,10 +22,13 @@ const subscribe = async (email: string, name: string): Promise<{ ok: boolean; me
     const res = await fetch("/api/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, name }),
+      body: JSON.stringify({ email, name, website, t }),
     })
     if (res.status === 409) return { ok: false, message: "You are already subscribed." }
-    if (!res.ok) return { ok: false, message: "Something went wrong. Please try again." }
+    if (!res.ok) {
+      const { error } = await res.json().catch(() => ({ error: "" }))
+      return { ok: false, message: ERRORS[error] || "Something went wrong. Please try again." }
+    }
     return { ok: true }
   } catch {
     return { ok: false, message: "Something went wrong. Please try again." }
@@ -40,12 +52,15 @@ const SubscribeForm = ({
   const [name, setName] = useState("")
   const [status, setStatus] = useState<Status>("idle")
   const [message, setMessage] = useState("")
+  const [website, setWebsite] = useState("")
+  const shownAt = useRef(0)
+  useEffect(() => { shownAt.current = Date.now() }, [])
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setStatus("loading")
     setMessage("")
-    const result = await subscribe(email.trim(), name.trim())
+    const result = await subscribe(email.trim(), name.trim(), website, shownAt.current)
     if (result.ok) {
       setStatus("success")
       setEmail("")
@@ -88,7 +103,9 @@ const SubscribeForm = ({
     return (
       <>
       {intro}
-      <form onSubmit={submit} noValidate className="border-t-2 border-ink mt-8 pt-6 flex flex-col gap-4">
+      <form onSubmit={submit} noValidate className="relative border-t-2 border-ink mt-8 pt-6 flex flex-col gap-4">
+        <input type="text" name="website" value={website} onChange={e => setWebsite(e.target.value)}
+          tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] w-px h-px opacity-0" />
         <label className="flex flex-col gap-1.5">
           <span className="font-sans font-semibold text-label tracking-nav uppercase">
             Name <span className="text-meta font-medium">(optional)</span>
@@ -141,7 +158,9 @@ const SubscribeForm = ({
 
   const band = variant === "band"
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-2.5">
+    <form onSubmit={submit} noValidate className="relative flex flex-col gap-2.5">
+      <input type="text" name="website" value={website} onChange={e => setWebsite(e.target.value)}
+        tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] w-px h-px opacity-0" />
       <div className="flex flex-col sm:flex-row">
         <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"
           aria-label="Email address" autoComplete="email"

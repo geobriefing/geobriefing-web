@@ -24,7 +24,18 @@ interface DeskData {
     replyCount: number
     lastIssueReplyCount: number
   }
+  /** Present once the issue has been queued for subscribers. */
+  email: { sent: number; queued: number; failed: number; skipped: number; quotaLeft: number } | null
   schedule: { publishDay: string; publishTime: string; timezone: string; nextSlot: string }
+}
+
+/** "Emailed 100 of 230 · 130 queued for tomorrow" */
+const emailLabel = (e: NonNullable<DeskData["email"]>) => {
+  const total = e.sent + e.queued + e.failed
+  const parts = [`emailed ${e.sent} of ${total}`]
+  if (e.queued) parts.push(`${e.queued} queued${e.quotaLeft ? "" : " for tomorrow"}`)
+  if (e.failed) parts.push(`${e.failed} failed`)
+  return parts.join(" · ")
 }
 
 const FEATURE_TYPES = ["Interview", "Concept Explainer", "Book & Paper Review", "App & Tool Review", "Opinion"]
@@ -159,7 +170,7 @@ const EditorsDeskPage = () => {
                 </select>
                 <span className="font-sans font-medium text-[13px] text-ink-3">
                   {published
-                    ? `Published ${formatDate(issue.published_at, "short")}${issue.email_sent_at ? " · emailed" : " · not emailed"}`
+                    ? `Published ${formatDate(issue.published_at, "short")} · ${desk.email ? emailLabel(desk.email) : "not emailed"}`
                     : scheduled
                       ? `Scheduled · publishes ${slotLabel(desk.schedule.nextSlot, tz)} (${tz})`
                       : `${reviewedCount} of ${DESK_SECTIONS.length} sections ready · next slot ${slotLabel(desk.schedule.nextSlot, tz)}`}
@@ -358,6 +369,9 @@ const EditorsDeskPage = () => {
 /** Region, type and source details shown next to the AI-draft badge. */
 const ItemBadges = ({ section, row }: { section: DeskSection; row: Row }) => {
   const meta = (text: string) => <span className="font-sans font-medium text-xs text-meta">{text}</span>
+  const source = (url: string | null, label: string) => url
+    ? <a href={url} target="_blank" rel="noopener noreferrer" className="font-sans font-medium text-xs text-accent hover:text-accent-deep">{label} ↗</a>
+    : <span className="font-sans font-bold text-[10.5px] tracking-meta uppercase text-danger">No source</span>
   switch (section) {
     case "news":
       return <><RegionPill region={row.region} />{meta([row.source_name, row.topic, row.scraped_at ? `scraped ${formatDate(row.scraped_at, "dayMonth")}` : null].filter(Boolean).join(" · "))}</>
@@ -367,8 +381,15 @@ const ItemBadges = ({ section, row }: { section: DeskSection; row: Row }) => {
       return <><RegionPill region={row.region} />{row.link_status === "broken"
         ? <span className="font-sans font-bold text-[10.5px] tracking-meta uppercase text-danger">Link broken</span>
         : meta(row.checked_at ? `link ok · checked ${formatDate(row.checked_at, "dayMonth")}` : "link not checked yet")}</>
-    case "gis_story": return <TypePill kind="story" value={row.story_type} />
-    case "maps_dont_lie": return <><TypePill kind="map" value={row.map_type} />{!row.image_url && meta("No image yet. Add one in the Maps tab.")}</>
+    case "gis_story":
+      return <><TypePill kind="story" value={row.story_type} />{source(row.source_url, row.source_title ? `Wikipedia: ${row.source_title}` : "Source")}</>
+    case "maps_dont_lie":
+      return <><TypePill kind="map" value={row.map_type} />{row.image_url ? meta(row.image_credit || "Image credit missing") : meta("No image yet. Add one in the Maps tab.")}</>
+    case "fun_facts": return source(row.source_url, row.source || "Source")
+    case "quote":
+      return row.source_url
+        ? source(row.source_url, "Verified on Wikiquote")
+        : <span className="font-sans font-bold text-[10.5px] tracking-meta uppercase text-danger">Not verified: check the quote before approving</span>
     case "events": return <><TypePill kind="event" value={row.event_type} />{meta([formatDate(row.start_date, "short"), row.location].filter(Boolean).join(" · "))}</>
     case "games": return meta("Check it on the live preview before approving.")
     default: return row.topic ? meta(row.topic) : null

@@ -4,6 +4,8 @@ import { runScheduler } from "@/lib/publish"
 
 /**
  * Publish scheduler, called hourly (GitHub Actions publish.yml, or Vercel Cron).
+ * Publishes issues whose slot has arrived, then sends queued emails within the
+ * daily allowance, so a list bigger than the allowance goes out over several days.
  * Requires `Authorization: Bearer <CRON_SECRET>`.
  */
 const handle = async (req: NextRequest) => {

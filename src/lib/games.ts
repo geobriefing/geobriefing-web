@@ -72,6 +72,8 @@ export const publicGameData = (g: GameRow): Record<string, unknown> => {
     if (!data.use_embed) {
       delete data.lat
       delete data.lon
+      // Served through /api/games/[id]/image: the imagery URL's bounding box would reveal the answer.
+      if (data.image_url) data.image_url = `/api/games/${g.id}/image`
     }
   }
   if (g.game_type === "geoguesser") {

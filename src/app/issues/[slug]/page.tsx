@@ -9,6 +9,7 @@ import Masthead from "@/components/Masthead"
 import Footer from "@/components/Footer"
 import SubscribeForm from "@/components/SubscribeForm"
 import ShareLinks from "@/components/ShareLinks"
+import Markdown from "@/components/Markdown"
 import { RegionPill, TypePill } from "@/components/Pills"
 import {
   DateBlock, EditorNote, FactBox, ImagePlaceholder, IssueSection, JokeCallout, Label, QuoteCallout, SectionLabel,
@@ -16,6 +17,8 @@ import {
 import SatelliteSpot from "@/components/games/SatelliteSpot"
 import GeoGuesser from "@/components/games/GeoGuesser"
 import GISCrossword from "@/components/games/GISCrossword"
+
+const LANGS: Record<string, string> = { ur: "Urdu", fa: "Persian", ar: "Arabic", ru: "Russian", en: "English" }
 
 const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
   const { slug } = await params
@@ -58,7 +61,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
 
           <HooksStrip d={d} />
 
-          {quote && <QuoteCallout text={quote.quote_text} author={quote.quote_author} role={quote.quote_role} size="lg" className="my-6 sm:my-7" />}
+          {quote && <QuoteCallout text={quote.quote_text} author={quote.quote_author} role={quote.quote_role} sourceUrl={quote.source_url} size="lg" className="my-6 sm:my-7" />}
 
           {issue.editor_note && (
             <div className={quote ? "" : "mt-6 sm:mt-7"}>
@@ -98,7 +101,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
                     </article>
                   )}
                   {b.kind === "joke" && <JokeCallout setup={b.joke.setup} punchline={b.joke.punchline} />}
-                  {b.kind === "fact" && <FactBox fact={b.fact.fact} source={b.fact.source} />}
+                  {b.kind === "fact" && <FactBox fact={b.fact.fact} source={b.fact.source} sourceUrl={b.fact.source_url} />}
                 </div>
               ))}
             </div>
@@ -134,6 +137,18 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
                     <div className="font-display font-semibold text-[16.5px] leading-[1.35] mt-1">{f.value}</div>
                   </div>
                 ))}
+                {countryDesk.source_urls.length > 0 && (
+                  <details className="mt-3 font-sans text-[13px] leading-[1.5] text-meta">
+                    <summary className="cursor-pointer text-accent">
+                      Sources ({countryDesk.source_urls.length}{countryDesk.source_languages.length ? `, in ${countryDesk.source_languages.map(l => LANGS[l] || l).join(", ")}` : ""})
+                    </summary>
+                    <ol className="mt-2 flex flex-col gap-1 list-decimal pl-4 break-all">
+                      {countryDesk.source_urls.map(u => (
+                        <li key={u}><a href={u} target="_blank" rel="noopener noreferrer" className="hover:text-accent">{new URL(u).hostname.replace(/^www\./, "")}</a></li>
+                      ))}
+                    </ol>
+                  </details>
+                )}
                 <div className="font-sans text-[13px] leading-[1.5] text-meta mt-2.5">Know this country well? Reply and help write a future desk.</div>
                 {issue.reply_prompt && (
                   <div className="font-sans text-[13px] leading-[1.5] text-ink mt-2.5">
@@ -164,16 +179,35 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
                     ) : p}
                   </p>
                 ))}
+                {gisStory.source_url && (
+                  <div className="mt-5 pt-3 border-t border-hair font-sans text-[13.5px] text-meta">
+                    Source: <a href={gisStory.source_url} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-deep">
+                      {gisStory.source_title ? `Wikipedia, “${gisStory.source_title}”` : "Original source"} ↗</a>
+                  </div>
+                )}
               </article>
               {(facts[1] || jokes[1] || facts[2] || jokes[2]) && (
                 <aside className="md:border-l md:border-hair md:pl-[22px] flex flex-col gap-[26px]">
-                  {facts[1] && <FactBox fact={facts[1].fact} source={facts[1].source} />}
+                  {facts[1] && <FactBox fact={facts[1].fact} source={facts[1].source} sourceUrl={facts[1].source_url} />}
                   {jokes[1] && <JokeCallout setup={jokes[1].setup} punchline={jokes[1].punchline} />}
-                  {facts[2] && <FactBox fact={facts[2].fact} source={facts[2].source} />}
+                  {facts[2] && <FactBox fact={facts[2].fact} source={facts[2].source} sourceUrl={facts[2].source_url} />}
                   {jokes[2] && <JokeCallout setup={jokes[2].setup} punchline={jokes[2].punchline} />}
                 </aside>
               )}
             </div>
+          </IssueSection>
+        )}
+
+        {sec("feature") && d.feature && (
+          <IssueSection id="feature" n={sec("feature")!.n} title={sec("feature")!.title}>
+            <article className="max-w-[680px]">
+              <div className="font-sans font-semibold text-label tracking-label uppercase text-accent">{d.feature.type}</div>
+              <h3 className="mt-2.5 font-display font-bold text-[27px] sm:text-[38px] leading-[1.12] sm:leading-[1.1] tracking-[-0.012em] text-balance">{d.feature.title}</h3>
+              <div className="font-sans font-medium text-caption tracking-meta uppercase text-meta mt-4 mb-6 pb-4 border-b border-hair">
+                By {d.feature.author_name} · {Math.max(1, Math.round(d.feature.body_markdown.split(/\s+/).length / 230))} min read
+              </div>
+              <Markdown source={d.feature.body_markdown} className="font-serif text-[17.5px] sm:text-long leading-[1.65] sm:leading-[1.7] text-ink-2 text-pretty" />
+            </article>
           </IssueSection>
         )}
 
@@ -187,9 +221,10 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
                 ) : (
                   <ImagePlaceholder label="Map image pending" className="aspect-[4/3]" />
                 )}
-                {map.source_url && (
+                {(map.image_credit || map.source_url) && (
                   <figcaption className="font-sans text-[13.5px] leading-[1.45] text-meta mt-2">
-                    <a href={map.source_url} target="_blank" rel="noopener noreferrer" className="hover:text-accent">Source ↗</a>
+                    {map.image_credit && <span>Map: {map.image_credit}. </span>}
+                    {map.source_url && <a href={map.source_url} target="_blank" rel="noopener noreferrer" className="hover:text-accent">Source ↗</a>}
                   </figcaption>
                 )}
               </figure>

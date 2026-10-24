@@ -2,12 +2,15 @@ import { createHmac, createHash, timingSafeEqual } from "crypto"
 
 /** Public site URL, used in emails. Set SITE_URL in the environment for production. */
 export const siteUrl = () =>
-  (process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://geobriefing.vercel.app").replace(/\/$/, "")
+  (process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://read-geobriefing.vercel.app").replace(/\/$/, "")
 
 /** Secret for signing links and hashing visitors. Falls back to the service key so it always exists server-side. */
 const secret = () =>
   process.env.LINK_SIGNING_SECRET || process.env.CRON_SECRET ||
   process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_KEY || "geobriefing"
+
+/** The site's host name for display, e.g. "read-geobriefing.vercel.app". */
+export const siteHost = () => siteUrl().replace(/^https?:\/\//, "")
 
 const sign = (value: string) => createHmac("sha256", secret()).update(value).digest("base64url").slice(0, 32)
 

@@ -29,10 +29,10 @@ export interface Story {
   source_name: string | null; source_url: string; is_lead: boolean; sort_order: number
 }
 export interface Joke { id: string; setup: string; punchline: string }
-export interface Fact { id: string; fact: string; source: string | null }
-export interface Quote { quote_text: string; quote_author: string; quote_role: string | null }
-export interface GisStory { id: string; title: string; content: string; story_type: string | null }
-export interface MapItem { id: string; title: string; commentary: string; map_type: string; image_url: string | null; source_url: string | null }
+export interface Fact { id: string; fact: string; source: string | null; source_url: string | null }
+export interface Quote { quote_text: string; quote_author: string; quote_role: string | null; source_url: string | null }
+export interface GisStory { id: string; title: string; content: string; story_type: string | null; source_title: string | null; source_url: string | null }
+export interface MapItem { id: string; title: string; commentary: string; map_type: string; image_url: string | null; source_url: string | null; image_credit: string | null }
 export interface Comic { id: string; title: string; image_url: string | null; comic_series: { title: string } | null }
 export interface EventItem {
   id: string; name: string; organizer: string | null; location: string | null; start_date: string
@@ -47,6 +47,7 @@ export interface CountryDesk {
   facts: { key: string; value: string }[]; follow: { name: string; why: string }[]
   source_languages: string[]; source_urls: string[]
 }
+export interface Feature { id: string; title: string; type: string; author_name: string; body_markdown: string }
 export interface PublicGame { id: string; game_type: GameType; data: Record<string, unknown> }
 
 export interface LastWeekGame {
@@ -71,7 +72,7 @@ export interface GamesTeaser {
   thisWeek: string
 }
 
-export type SectionId = "news" | "country" | "story" | "maps" | "comics" | "games" | "events" | "data"
+export type SectionId = "news" | "country" | "story" | "feature" | "maps" | "comics" | "games" | "events" | "data"
 export interface Section { id: SectionId; n: number; title: string; nav: string }
 
 export interface IssueData {
@@ -83,6 +84,7 @@ export interface IssueData {
   mustRead: Story | null
   countryDesk: CountryDesk | null
   gisStory: GisStory | null
+  feature: Feature | null
   map: MapItem | null
   comics: Comic[]
   games: { satellite: PublicGame | null; geoguesser: PublicGame | null; crossword: PublicGame | null }
@@ -105,6 +107,7 @@ const SECTION_TITLES: Record<SectionId, [string, string]> = {
   news: ["GIS News Digest", "News"],
   country: ["Country desk", "Country desk"],
   story: ["GIS Story", "Story"],
+  feature: ["Feature", "Feature"],
   maps: ["Maps Don't Lie", "Maps"],
   comics: ["Comics", "Comics"],
   games: ["Games", "Games"],
@@ -124,12 +127,13 @@ const median = (xs: number[]) => {
 // ─────────────────────────────────────────
 
 /** Minutes to read the approved content of an issue. Stored on publish as read_time_minutes. */
-export const computeReadTime = (d: Pick<IssueData, "issue" | "stories" | "gisStory" | "map" | "countryDesk" | "jokes" | "facts" | "quote" | "datasets">) =>
+export const computeReadTime = (d: Pick<IssueData, "issue" | "stories" | "gisStory" | "feature" | "map" | "countryDesk" | "jokes" | "facts" | "quote" | "datasets">) =>
   readTime([
     d.issue.editor_note,
     d.quote?.quote_text,
     ...d.stories.flatMap(s => [s.title, s.summary]),
     d.gisStory?.content,
+    d.feature?.body_markdown,
     d.map?.commentary,
     d.countryDesk?.intro,
     ...(d.countryDesk?.facts || []).map(f => `${f.key} ${f.value}`),
@@ -225,16 +229,16 @@ export const getIssue = async (
 
   const [
     { data: stories }, { data: jokes }, { data: facts }, { data: quote }, { data: gisStory }, { data: map },
-    { data: comics }, { data: games }, { data: events }, { data: datasets }, { data: desk }, lastWeek, replyCount,
+    { data: comics }, { data: games }, { data: events }, { data: datasets }, { data: desk }, lastWeek, replyCount, { data: feature },
   ] = await Promise.all([
     db.from("stories").select("id,title,summary,region,topic,source_name,source_url,is_lead,sort_order")
       .eq("issue_id", id).eq("status", "approved")
       .order("is_lead", { ascending: false }).order("sort_order").order("relevance_score", { ascending: false }),
     db.from("jokes").select("id,setup,punchline").eq("issue_id", id).eq("status", "approved").order("sort_order"),
-    db.from("fun_facts").select("id,fact,source").eq("issue_id", id).eq("status", "approved").order("sort_order"),
-    db.from("quotes").select("quote_text,quote_author,quote_role").eq("issue_id", id).eq("status", "approved").limit(1).maybeSingle(),
-    db.from("gis_stories").select("id,title,content,story_type").eq("issue_id", id).eq("status", "approved").limit(1).maybeSingle(),
-    db.from("maps_dont_lie").select("id,title,commentary,map_type,image_url,source_url").eq("issue_id", id).eq("status", "approved").limit(1).maybeSingle(),
+    db.from("fun_facts").select("id,fact,source,source_url").eq("issue_id", id).eq("status", "approved").order("sort_order"),
+    db.from("quotes").select("quote_text,quote_author,quote_role,source_url").eq("issue_id", id).eq("status", "approved").limit(1).maybeSingle(),
+    db.from("gis_stories").select("id,title,content,story_type,source_title,source_url").eq("issue_id", id).eq("status", "approved").limit(1).maybeSingle(),
+    db.from("maps_dont_lie").select("id,title,commentary,map_type,image_url,source_url,image_credit").eq("issue_id", id).eq("status", "approved").limit(1).maybeSingle(),
     db.from("comic_strips").select("id,title,image_url,comic_series(title)").eq("issue_id", id).eq("status", "approved").order("sort_order"),
     db.from("games").select("*").eq("issue_id", id).eq("status", "approved"),
     db.from("events").select("id,name,organizer,location,start_date,end_date,event_type,is_free,is_online,url")
@@ -245,6 +249,7 @@ export const getIssue = async (
     getLastWeekAnswers(issue.issue_number).catch(() => null),
     supabaseAdmin().from("replies").select("id", { count: "exact", head: true }).eq("issue_id", id)
       .then(r => r.count || 0, () => 0),
+    db.from("features").select("id,title,type,author_name,body_markdown").eq("issue_id", id).eq("status", "approved").limit(1).maybeSingle(),
   ])
 
   const gameRows = (games || []) as GameRow[]
@@ -265,6 +270,7 @@ export const getIssue = async (
     mustRead: storyList.find(s => s.id === issue.must_read_story_id) || storyList.find(s => s.is_lead) || null,
     countryDesk: (desk as CountryDesk) || null,
     gisStory: (gisStory as GisStory) || null,
+    feature: (feature as Feature) || null,
     map: (map as MapItem) || null,
     comics: (comics || []) as unknown as Comic[],
     games: gamesOut,
@@ -282,6 +288,7 @@ export const getIssue = async (
     news: data.stories.length > 0,
     country: !!data.countryDesk,
     story: !!data.gisStory,
+    feature: !!data.feature,
     maps: !!data.map,
     comics: data.comics.length > 0,
     games: !!(gamesOut.satellite || gamesOut.geoguesser || gamesOut.crossword),
