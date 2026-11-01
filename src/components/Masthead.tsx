@@ -1,5 +1,6 @@
 import Link from "next/link"
 import Wordmark from "@/components/Wordmark"
+import EditionToggle from "@/components/EditionToggle"
 import { supabase } from "@/lib/supabase"
 import { formatDate } from "@/lib/format"
 
@@ -34,7 +35,10 @@ const Masthead = async ({ active, maxWidth = "max-w-5xl" }: { active?: NavKey; m
       <div className="flex justify-between items-center gap-4 py-[7px] sm:py-[9px] font-sans font-semibold text-[11px] sm:text-label leading-[1.2] tracking-nav sm:tracking-button uppercase">
         <span className="sm:hidden">{issueLineShort}</span>
         <span className="hidden sm:inline">{issueLine}</span>
-        <span className="hidden md:inline text-meta font-medium">GIS · Maps · Earth observation · GeoAI · Geography</span>
+        <span className="flex items-center gap-4">
+          <span className="hidden md:inline text-meta font-medium">GIS · Maps · Earth observation · GeoAI · Geography</span>
+          <EditionToggle variant="masthead" />
+        </span>
       </div>
 
       <div className="border-y border-ink pt-3.5 pb-[11px] sm:pt-[22px] sm:pb-4 flex flex-col items-center">
