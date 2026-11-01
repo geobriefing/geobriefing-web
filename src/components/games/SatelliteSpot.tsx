@@ -14,7 +14,7 @@ type Pick = { option: string; correct: boolean }
 const KEYS = "ABCDEFGH"
 
 /** The answer is not in the page: each pick is checked (and anonymously counted) by /api/games/play. */
-const SatelliteSpot = ({ data, gameId, publishDay }: { data: SatelliteSpotData; gameId: string; publishDay: string }) => {
+const SatelliteSpot = ({ data, gameId }: { data: SatelliteSpotData; gameId: string }) => {
   const [picks, setPicks] = useState<Pick[]>([])
   const [fact, setFact] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -64,7 +64,10 @@ const SatelliteSpot = ({ data, gameId, publishDay }: { data: SatelliteSpotData; 
       </figure>
       <div>
         <SectionLabel className="mb-3">Satellite Spot</SectionLabel>
-        <h3 className="font-display font-semibold text-xl sm:text-[22px] leading-[1.25] mb-4">Where on Earth is this?</h3>
+        <h3 className="font-display font-semibold text-xl sm:text-[22px] leading-[1.25]">What are you looking at?</h3>
+        <p className="font-sans text-[15px] leading-[1.5] text-ink-3 mt-1.5 mb-4">
+          Study the satellite image and choose your answer. No labels. No coordinates. Good luck.
+        </p>
         <div className="flex flex-col gap-2">
           {options.map((option, i) => {
             const p = picks.find(x => x.option === option)
@@ -95,10 +98,12 @@ const SatelliteSpot = ({ data, gameId, publishDay }: { data: SatelliteSpotData; 
           })}
         </div>
         <p className="mt-3 font-sans text-[15px] sm:text-sm leading-[1.5] text-ink-3 min-h-[21px]" aria-live="polite">
-          {error || (solved ? fact || "Correct." : last ? "Not quite. Try another." : "")}
+          {error || (solved
+            ? <><b className="text-ink">Correct.</b> Your ability to identify Earth from several hundred kilometres away remains impressive.{fact && <span className="block mt-1.5">{fact}</span>}</>
+            : last ? <><b className="text-ink">Not this time.</b> Earth looks surprisingly unhelpful from above.</> : "")}
         </p>
         <div className="font-sans font-medium text-caption tracking-[.1em] uppercase text-meta mt-1">
-          Full answer in next {publishDay}&apos;s issue
+          Full answer and reader results in the next issue
         </div>
       </div>
     </div>

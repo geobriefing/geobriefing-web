@@ -3,6 +3,7 @@ export const revalidate = 0
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { getSettings } from "@/lib/settings"
+import { nextIssueDate } from "@/lib/schedule"
 import { getIssue, latestIssueNumber, type IssueData } from "@/lib/issue"
 import { dateParts, formatDate, pad2, readTime } from "@/lib/format"
 import Masthead from "@/components/Masthead"
@@ -11,45 +12,51 @@ import SubscribeForm from "@/components/SubscribeForm"
 import { RegionPill, TypePill } from "@/components/Pills"
 import {
   DateBlock, EditorNote, FactBox, ImagePlaceholder, JokeCallout, Label, Meta, PrimaryLink,
-  QuoteCallout, SectionLabel, SectionRule, TextLink,
+  SectionLabel, SectionRule, TextLink,
 } from "@/components/Editorial"
 
 interface PastIssue { id: string; issue_number: number; slug: string; headline: string; published_at: string | null }
 
 const TOC_TEASER: Record<string, (d: IssueData) => string> = {
-  news: d => {
-    const regions = new Set(d.stories.map(s => s.region)).size
-    return `${d.stories.length} ${d.stories.length === 1 ? "story" : "stories"} from ${regions} ${regions === 1 ? "region" : "regions"}.`
-  },
-  country: d => `${d.countryDesk?.country}, in depth from local-language sources.`,
-  story: d => d.gisStory?.title || "",
-  feature: d => `${d.feature?.type}: ${d.feature?.title}`,
-  maps: d => d.map?.title || "",
-  comics: d => d.comics[0]?.title || "",
-  games: d => `${d.gamesTeaser?.thisWeek || "New puzzles this week."}${d.lastWeek ? " Plus last week's answers." : ""}`,
-  events: d => `${d.events.length} upcoming, starting with ${d.events[0]?.name}.`,
-  data: d => `${d.datasets.length} new open ${d.datasets.length === 1 ? "dataset" : "datasets"}, with format and licence.`,
+  news: () => "The stories that mattered. Thirty days of geospatial news reduced to the things actually worth knowing.",
+  feature: d => `One subject deserves more space. We give it some.${d.feature ? ` ${d.feature.title}.` : ""}`,
+  country: d => `${d.countryDesk?.country}. One country, from the inside.`,
+  story: () => "Everything happens somewhere. Stories where geography changes the explanation.",
+  maps: () => "One map. One story. Sometimes the quickest way to understand something is to see where it happened.",
+  data: () => "Useful things live here. Datasets, imagery, portals and geospatial resources worth keeping.",
+  events: d => `${d.events.length} ${d.events.length === 1 ? "date" : "dates"} worth putting on your map.`,
+  comics: () => "A brief interruption.",
+  games: () => "Test your geography. Satellite Spot. Where on Earth? The Grid. Confidence encouraged. Accuracy preferable.",
 }
 
 const HomePage = async () => {
   const [latest, settings] = await Promise.all([latestIssueNumber(), getSettings()])
   const d = latest != null ? await getIssue(latest) : null
+  const next = nextIssueDate(settings)
 
   if (!d) {
     return (
       <div className="min-h-dvh">
-        <Masthead active="this-week" />
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 py-16 text-center">
-          <h1 className="font-display font-bold text-[30px] sm:text-display">The first issue is on its way</h1>
-          <p className="mt-4 font-serif text-lg text-ink-2">Subscribe and it will arrive on {settings.publishDay} afternoon.</p>
-          <div className="mt-8"><PrimaryLink href="/subscribe">Subscribe</PrimaryLink></div>
+        <Masthead active="latest" />
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-20 text-center">
+          <Meta>Issue №01 · {next.date}</Meta>
+          <h1 className="mt-4 font-display font-bold text-[30px] sm:text-display leading-[1.05]">The first edition is on its way.</h1>
+          <p className="mt-5 mx-auto max-w-[560px] font-serif text-lg leading-[1.6] text-ink-2">
+            A new independent publication about the world through a spatial lens.
+          </p>
+          <p className="mt-2 font-sans font-semibold text-[15px] sm:text-base text-ink">Maps. GIS. Earth observation. GeoAI. Data. Geography.</p>
+          <p className="mt-3 mx-auto max-w-[560px] font-serif text-lg leading-[1.6] text-ink-2">
+            Plus a Country Desk, useful datasets, unusual facts, comics and games, because nobody needs another
+            publication consisting entirely of Very Important Paragraphs.
+          </p>
+          <div className="mt-8"><PrimaryLink href="/subscribe">Subscribe for issue №01 →</PrimaryLink></div>
         </main>
         <Footer />
       </div>
     )
   }
 
-  const { issue, stories, comics, events, quote, gisStory, countryDesk, datasets } = d
+  const { issue, stories, comics, events, gisStory, countryDesk, datasets } = d
   const mapItem = d.map
   const { data: pastData } = await supabase.from("issues").select("id,issue_number,slug,headline,published_at")
     .eq("status", "published").lt("issue_number", issue.issue_number)
@@ -61,21 +68,21 @@ const HomePage = async () => {
   const minutes = d.readTimeMinutes
 
   // Table of contents: the issue's own numbered sections, so numbering always matches.
-  const toc = d.sections.map(s => ({ title: s.id === "news" ? "GIS News" : s.title, teaser: TOC_TEASER[s.id](d), anchor: s.id }))
+  const toc = d.sections.map(s => ({ title: s.title, teaser: TOC_TEASER[s.id](d), anchor: s.id }))
 
   const [lead, ...rest] = stories
   const nextEvent = events[0]
 
   return (
     <div className="min-h-dvh">
-      <Masthead active="this-week" />
+      <Masthead active="latest" />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6">
 
         {/* Lead */}
         <section className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] pt-6 sm:pt-9 pb-7 sm:pb-10">
           <div className="md:pr-8">
-            <SectionLabel className="mb-3.5 sm:mb-[18px]">This week&apos;s briefing</SectionLabel>
+            <SectionLabel className="mb-3.5 sm:mb-[18px]">This month&apos;s briefing</SectionLabel>
             <h1 className="font-display font-bold text-[30px] sm:text-[44px] leading-[1.08] sm:leading-[1.06] tracking-[-0.015em] text-balance">
               {issue.headline}
             </h1>
@@ -83,9 +90,8 @@ const HomePage = async () => {
               {formatDate(issue.published_at, "weekday")} · {minutes} min read
               {stories.length > 0 && ` · ${stories.length} ${stories.length === 1 ? "story" : "stories"}`}
             </Meta>
-            {quote && <QuoteCallout text={quote.quote_text} author={quote.quote_author} role={quote.quote_role} sourceUrl={quote.source_url} className="my-5 sm:my-[26px]" />}
             {issue.editor_note && (
-              <div className={quote ? "" : "mt-5 sm:mt-[26px]"}>
+              <div className="mt-5 sm:mt-[26px]">
                 <EditorNote note={issue.editor_note} name={settings.editorName} photoUrl={settings.editorPhotoUrl} />
               </div>
             )}
@@ -118,7 +124,7 @@ const HomePage = async () => {
             <SectionRule />
             <section className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] pt-6 sm:pt-8 pb-8 sm:pb-10">
               <div className="md:pr-8">
-                <SectionLabel>Top stories</SectionLabel>
+                <SectionLabel>The Month in 60 Seconds</SectionLabel>
                 <div className={`grid grid-cols-1 ${rest.length > 0 ? "sm:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]" : ""}`}>
                   <article className={rest.length > 0 ? "sm:pr-6 sm:border-r sm:border-hair" : ""}>
                     <div className="flex flex-wrap gap-2 items-center mb-2.5">
@@ -152,11 +158,11 @@ const HomePage = async () => {
 
               {(joke || fact || nextEvent) && (
                 <aside className="mt-6 md:mt-0 md:border-l md:border-hair md:pl-7 flex flex-col gap-7">
-                  {joke && <JokeCallout setup={joke.setup} punchline={joke.punchline} />}
-                  {fact && <FactBox fact={fact.fact} source={fact.source} sourceUrl={fact.source_url} />}
+                  {joke && <JokeCallout label="Spatial humour" setup={joke.setup} punchline={joke.punchline} />}
+                  {fact && <FactBox label="One strange planet" fact={fact.fact} source={fact.source} sourceUrl={fact.source_url} />}
                   {nextEvent && (
                     <div>
-                      <SectionLabel className="mb-3.5">Next event</SectionLabel>
+                      <SectionLabel className="mb-3.5">On the calendar</SectionLabel>
                       <div className="flex gap-3.5">
                         <DateBlock {...dateParts(nextEvent.start_date)} />
                         <div>
@@ -182,8 +188,8 @@ const HomePage = async () => {
             <SectionRule />
             <section className="pt-6 sm:pt-8 pb-8 sm:pb-10">
               <SectionLabel className="mb-5" aside={
-                <span className="hidden sm:inline font-sans font-medium text-label tracking-meta uppercase text-meta">A different country each week</span>
-              }>Country desk</SectionLabel>
+                <span className="hidden sm:inline font-sans font-medium text-label tracking-meta uppercase text-meta">One country. From the inside.</span>
+              }>Country Desk</SectionLabel>
               <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)] gap-6 md:gap-8 items-start">
                 <div>
                   <div className="flex items-center gap-2.5">
@@ -216,7 +222,7 @@ const HomePage = async () => {
             <section className="grid grid-cols-1 md:grid-cols-3 pt-6 sm:pt-8 pb-8 sm:pb-10 gap-y-8">
               {gisStory && (
                 <div className="md:pr-6">
-                  <SectionLabel className="mb-4">GIS Story</SectionLabel>
+                  <SectionLabel className="mb-4">The GIS Story</SectionLabel>
                   <h3 className="font-display font-bold text-[22px] sm:text-2xl leading-[1.18] text-balance">{gisStory.title}</h3>
                   <p className="mt-2.5 font-serif text-base leading-[1.6] text-ink-2 line-clamp-5 text-pretty">{gisStory.content}</p>
                   <Meta className="text-[11.5px] tracking-[.1em] mt-3 mb-4">{readTime([gisStory.content])} min read</Meta>
@@ -242,7 +248,7 @@ const HomePage = async () => {
               {(comics.length > 0 || datasets.length > 0) && (
                 <div className={`${gisStory || mapItem ? "md:pl-6 md:border-l md:border-hair" : ""}`}>
                   {comics.length > 0 && (<>
-                  <SectionLabel className="mb-4">Comics</SectionLabel>
+                  <SectionLabel className="mb-4">The Cartoon</SectionLabel>
                   <Link href={`${href}#comics`} className="grid grid-cols-2 gap-2">
                     {comics.slice(0, 2).map(c => c.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -258,7 +264,7 @@ const HomePage = async () => {
                   </>)}
                   {datasets.length > 0 && (
                     <>
-                      <SectionLabel className={`${comics.length ? "mt-6" : ""} mb-1`}>Data drops</SectionLabel>
+                      <SectionLabel className={`${comics.length ? "mt-6" : ""} mb-1`}>Data Drops</SectionLabel>
                       {datasets.slice(0, 3).map(x => (
                         <Link key={x.id} href={`${href}#data`} className="flex justify-between gap-2.5 py-2.5 border-b border-hair text-ink hover:text-accent">
                           <span>
@@ -307,12 +313,13 @@ const HomePage = async () => {
         <section className="bg-[#1A1A1A] text-[#FAFAF7] -mx-4 sm:mx-0 px-4 py-7 sm:p-10 mb-7 sm:mb-12 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center">
           <div>
             <Label className="block mb-3 text-[#7FCF9F]!">Subscribe</Label>
-            <div className="font-display font-bold text-[30px] sm:text-[40px] leading-[1.05] tracking-[-0.01em]">Free. Every {settings.publishDay}.</div>
+            <div className="font-display font-bold text-[30px] sm:text-[40px] leading-[1.05] tracking-[-0.01em]">Don&apos;t miss the next edition.</div>
             <p className="mt-2 sm:mt-3 font-sans text-[15px] sm:text-base leading-[1.55] text-[#CFCEC6]">
-              One email a week: the news, a country in depth, a story, a map, a comic and a game, with last week&apos;s answers. No ads. Unsubscribe in one click.
+              One carefully edited issue on the first of every month.
             </p>
+            <p className="mt-1.5 font-sans font-semibold text-[15px] sm:text-base text-[#FAFAF7]">Free. Monthly. Actually worth opening.</p>
           </div>
-          <SubscribeForm variant="band" publishDay={settings.publishDay} />
+          <SubscribeForm variant="band" nextMonth={next.month} contactEmail={settings.editorContact} />
         </section>
       </main>
 

@@ -77,8 +77,8 @@ export const POST = async (req: NextRequest) => {
   const body = stripQuotedReply(text).slice(0, 5000)
 
   const db = supabaseAdmin()
-  // "Re: Issue #12: ..." → issue 12; otherwise the latest published issue.
-  const number = Number(subject.match(/#(\d+)/)?.[1])
+  // "Re: GeoBriefing №12 — ..." (or "#12") → issue 12; otherwise the latest published issue.
+  const number = Number(subject.match(/(?:#|№)\s*(\d+)/)?.[1])
   const { data: issue } = number
     ? await db.from("issues").select("id, reply_prompt").eq("issue_number", number).maybeSingle()
     : await db.from("issues").select("id, reply_prompt").eq("status", "published")

@@ -48,11 +48,26 @@ const SourcesPage = async () => {
           <div>
             <Label>Sources</Label>
             <h1 className="mt-2.5 font-display font-bold text-[30px] sm:text-[44px] leading-[1.08] tracking-[-0.012em] text-balance">
-              Where the news comes from
+              Our sources
             </h1>
           </div>
           <p className="font-serif text-[17px] leading-[1.6] text-ink-2">
-            These are the places we read every week. Every item in an issue links back to its original source.
+            Good maps begin with good data. Good publications aren&apos;t particularly different.
+          </p>
+        </div>
+
+        <div className="max-w-[720px] pt-6 sm:pt-7 pb-2 font-serif text-[17px] leading-[1.65] text-ink-2">
+          <p className="mb-4">
+            GeoBriefing monitors a mix of international and regional newsrooms, scientific institutions, space agencies,
+            research publications, GIS organisations, open-data portals and local-language sources.
+          </p>
+          <p className="mb-4">
+            Automation helps collect, organise and surface potentially useful material. It does not decide what you read.
+            Sources are reviewed, stories are selected editorially, links are checked and every issue is reviewed before publication.
+          </p>
+          <p>
+            Where possible, we favour original reporting, primary datasets, research institutions and authoritative sources
+            over somebody else&apos;s summary of somebody else&apos;s summary. Because eventually someone should probably read the original.
           </p>
         </div>
 

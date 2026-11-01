@@ -2,13 +2,16 @@
 
 import Link from "next/link"
 import { getArchive } from "@/lib/issue"
+import { getSettings } from "@/lib/settings"
+import { nextIssueDate } from "@/lib/schedule"
 import { formatDate } from "@/lib/format"
 import Masthead from "@/components/Masthead"
 import Footer from "@/components/Footer"
 import { Label, Meta, PrimaryLink } from "@/components/Editorial"
 
 const IssuesPage = async () => {
-  const { groups, totalIssues, firstIssueDate } = await getArchive()
+  const [{ groups, totalIssues, firstIssueDate }, settings] = await Promise.all([getArchive(), getSettings()])
+  const next = nextIssueDate(settings)
   const issues = groups.flatMap(g => g.items)
 
   return (
@@ -19,7 +22,11 @@ const IssuesPage = async () => {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 sm:gap-6 pt-7 sm:pt-10 pb-5 sm:pb-6 border-b-2 border-ink">
           <div>
             <Label>Archive</Label>
-            <h1 className="mt-2.5 font-display font-bold text-[30px] sm:text-[44px] leading-[1.05] tracking-[-0.012em]">All issues</h1>
+            <h1 className="mt-2.5 font-display font-bold text-[30px] sm:text-[44px] leading-[1.05] tracking-[-0.012em]">The archive</h1>
+            <p className="mt-2 font-serif text-[17px] leading-[1.6] text-ink-2 max-w-[620px]">
+              Every issue, from the beginning. Browse previous editions, revisit Country Desks, find an old dataset or finally
+              play the game you confidently told yourself you&apos;d come back to.
+            </p>
           </div>
           {issues.length > 0 && (
             <Meta>
@@ -31,8 +38,9 @@ const IssuesPage = async () => {
 
         {issues.length === 0 && (
           <div className="py-16 text-center">
-            <p className="font-serif text-lg text-ink-2">No issues have been published yet.</p>
-            <div className="mt-6"><PrimaryLink href="/subscribe">Get the first one</PrimaryLink></div>
+            <p className="font-display font-bold text-[24px] sm:text-[30px]">Nothing to archive. Yet.</p>
+            <p className="mt-2 font-serif text-lg text-ink-2">Issue №01 is coming on {next.date}.</p>
+            <div className="mt-6"><PrimaryLink href="/subscribe">Get the first issue →</PrimaryLink></div>
           </div>
         )}
 

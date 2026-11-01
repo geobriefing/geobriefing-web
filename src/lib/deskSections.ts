@@ -18,20 +18,20 @@ export interface DeskSectionDef {
   creatable: boolean
 }
 
-// Issue order first, then the extras that are mixed into other sections.
+// Issue order: catch up, explore, use, play; then the small items placed between sections.
 export const DESK_SECTIONS: DeskSectionDef[] = [
-  { key: "news", label: "GIS News", table: "stories", skippable: false, creatable: false },
-  { key: "country_desk", label: "Country desk", table: "country_desks", skippable: true, creatable: true },
-  { key: "gis_story", label: "GIS Story", table: "gis_stories", skippable: true, creatable: false },
+  { key: "news", label: "The Month in 60 Seconds", table: "stories", skippable: false, creatable: false },
+  { key: "features", label: "The Big Story", table: "features", skippable: true, creatable: false },
+  { key: "country_desk", label: "Country Desk", table: "country_desks", skippable: true, creatable: true },
+  { key: "gis_story", label: "The GIS Story", table: "gis_stories", skippable: true, creatable: false },
   { key: "maps_dont_lie", label: "Maps Don't Lie", table: "maps_dont_lie", skippable: true, creatable: false },
-  { key: "comics", label: "Comics", table: "comic_strips", skippable: true, creatable: false },
-  { key: "games", label: "Games", table: "games", skippable: true, creatable: false },
-  { key: "events", label: "Events", table: "events", skippable: true, creatable: true },
-  { key: "data_drops", label: "Data drops", table: "datasets", skippable: true, creatable: true },
-  { key: "quote", label: "Quote of the week", table: "quotes", skippable: true, creatable: false },
-  { key: "jokes", label: "Jokes", table: "jokes", skippable: true, creatable: false },
-  { key: "fun_facts", label: "Fun facts", table: "fun_facts", skippable: true, creatable: false },
-  { key: "features", label: "Features", table: "features", skippable: true, creatable: false },
+  { key: "data_drops", label: "Data Drops", table: "datasets", skippable: true, creatable: true },
+  { key: "events", label: "On the Calendar", table: "events", skippable: true, creatable: true },
+  { key: "comics", label: "The Cartoon", table: "comic_strips", skippable: true, creatable: false },
+  { key: "games", label: "Play", table: "games", skippable: true, creatable: false },
+  { key: "fun_facts", label: "One Strange Planet (fact)", table: "fun_facts", skippable: true, creatable: false },
+  { key: "quote", label: "In the Margins (quote)", table: "quotes", skippable: true, creatable: false },
+  { key: "jokes", label: "Spatial Humour (joke)", table: "jokes", skippable: true, creatable: false },
 ]
 
 /** Fields the desk may change per table. Anything else in a patch is ignored. */

@@ -2,12 +2,11 @@ import Link from "next/link"
 import Wordmark from "@/components/Wordmark"
 import { supabase } from "@/lib/supabase"
 import { formatDate } from "@/lib/format"
-import { siteHost } from "@/lib/site"
 
-export type NavKey = "this-week" | "all-issues" | "about" | "sources" | "subscribe"
+export type NavKey = "latest" | "all-issues" | "about" | "sources" | "subscribe"
 
 const NAV_ITEMS: { key: NavKey; label: string; href: string }[] = [
-  { key: "this-week", label: "This week", href: "/" },
+  { key: "latest", label: "Latest issue", href: "/" },
   { key: "all-issues", label: "All issues", href: "/issues" },
   { key: "about", label: "About", href: "/about" },
   { key: "sources", label: "Sources", href: "/sources" },
@@ -35,7 +34,7 @@ const Masthead = async ({ active, maxWidth = "max-w-5xl" }: { active?: NavKey; m
       <div className="flex justify-between items-center gap-4 py-[7px] sm:py-[9px] font-sans font-semibold text-[11px] sm:text-label leading-[1.2] tracking-nav sm:tracking-button uppercase">
         <span className="sm:hidden">{issueLineShort}</span>
         <span className="hidden sm:inline">{issueLine}</span>
-        <span className="text-meta font-medium normal-case tracking-[.04em] sm:tracking-[.06em] text-[11.5px] sm:text-xs">{siteHost()}</span>
+        <span className="hidden md:inline text-meta font-medium">GIS · Maps · Earth observation · GeoAI · Geography</span>
       </div>
 
       <div className="border-y border-ink pt-3.5 pb-[11px] sm:pt-[22px] sm:pb-4 flex flex-col items-center">
@@ -45,14 +44,13 @@ const Masthead = async ({ active, maxWidth = "max-w-5xl" }: { active?: NavKey; m
         </Link>
         <div className="w-[240px] sm:w-[360px] h-px bg-ink mt-[9px] sm:mt-3" />
         <div className="font-sans font-semibold text-[10px] sm:text-[11px] leading-none tracking-[.22em] sm:tracking-[.34em] pl-[.22em] sm:pl-[.34em] uppercase mt-[7px] sm:mt-[9px]">
-          Spatial Intelligence · Weekly
+          Spatial Intelligence · Monthly
         </div>
       </div>
 
-      <div className="flex justify-center sm:justify-between gap-4 py-[7px] sm:py-[9px] font-sans font-medium text-[11px] sm:text-label leading-[1.2] tracking-[.08em] sm:tracking-meta uppercase text-meta border-b border-hair">
-        <span className="sm:hidden">S. Asia · Middle East · C. Asia · Global</span>
-        <span className="hidden sm:inline">South Asia · Middle East · Central Asia · Global</span>
-        <span className="hidden sm:inline">Free weekly · GIS intelligence</span>
+      <div className="flex justify-center lg:justify-between gap-4 py-[7px] sm:py-[9px] font-sans font-medium text-[11px] sm:text-label leading-[1.2] tracking-[.08em] sm:tracking-meta uppercase text-meta border-b border-hair">
+        <span className="hidden lg:inline">Africa · Asia · Europe · Middle East · North America · Latin America · Oceania</span>
+        <span className="font-semibold text-ink">Read the world spatially.</span>
       </div>
 
       <nav className="flex flex-wrap justify-center items-center gap-x-5 sm:gap-x-8 border-b-2 border-ink">

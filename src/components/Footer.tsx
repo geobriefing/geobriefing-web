@@ -4,7 +4,7 @@ import EditionToggle from "@/components/EditionToggle"
 import { getSettings } from "@/lib/settings"
 
 const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
-  { title: "Read", links: [{ label: "This week", href: "/" }, { label: "All issues", href: "/issues" }] },
+  { title: "Read", links: [{ label: "Latest issue", href: "/" }, { label: "Archive", href: "/issues" }] },
   {
     title: "GeoBriefing",
     links: [
@@ -16,8 +16,11 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
 ]
 
 const Footer = async ({ maxWidth = "max-w-5xl" }: { maxWidth?: string }) => {
-  const { publishDay } = await getSettings()
+  const { editorName, editorContact } = await getSettings()
   const year = new Date().getFullYear()
+  const columns = editorContact
+    ? COLUMNS.map((c, i) => i === 1 ? { ...c, links: [...c.links, { label: "Contact", href: `mailto:${editorContact}` }] } : c)
+    : COLUMNS
 
   return (
     <footer className={`${maxWidth} mx-auto px-4 sm:px-6 pb-10 font-sans text-ink`}>
@@ -26,12 +29,14 @@ const Footer = async ({ maxWidth = "max-w-5xl" }: { maxWidth?: string }) => {
         <div className="flex-[1_1_260px] max-w-[380px]">
           <Wordmark size={26} />
           <p className="mt-3 text-[15px] sm:text-sm leading-[1.55] text-ink-3 text-pretty">
-            A free weekly briefing for the global geospatial community, with a focus on South Asia, the Middle East
-            and Central Asia. Independent. No ads. Every {publishDay} afternoon.
+            An independent monthly publication covering maps, GIS, Earth observation, GeoAI, spatial data and the
+            geography behind the stories shaping our world.
           </p>
+          <p className="mt-2 text-[15px] sm:text-sm leading-[1.55] text-ink font-semibold">New issue on the 1st of every month.</p>
+          {editorName && <p className="mt-1 text-[15px] sm:text-sm leading-[1.55] text-ink-3">Edited by {editorName}</p>}
         </div>
         <div className="flex flex-wrap gap-12">
-          {COLUMNS.map(col => (
+          {columns.map(col => (
             <div key={col.title} className="flex flex-col sm:gap-[9px] text-[15px] sm:text-sm">
               <span className="font-bold text-[11.5px] leading-none tracking-label uppercase text-accent mb-1">{col.title}</span>
               {col.links.map(l => (
@@ -42,9 +47,9 @@ const Footer = async ({ maxWidth = "max-w-5xl" }: { maxWidth?: string }) => {
         </div>
       </div>
       <div className="border-t border-hair pt-3.5 flex flex-wrap justify-between items-center gap-2 font-medium text-[11.5px] leading-[1.4] tracking-meta uppercase text-meta">
-        <span>© {year} GeoBriefing</span>
+        <span>© {year} GeoBriefing. All rights reserved.</span>
         <EditionToggle />
-        <span>Spatial intelligence · Weekly</span>
+        <span>Read the world spatially.</span>
       </div>
     </footer>
   )

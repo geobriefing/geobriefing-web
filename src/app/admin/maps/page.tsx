@@ -196,7 +196,7 @@ const MapsAdminPage = () => {
 
           {drafts.length === 0 && !showNewForm && (
             <div className="mt-5 border border-dashed border-[#B9B8B0] bg-card px-6 py-10 text-center font-sans text-[15px] text-ink-3">
-              No maps yet. The weekly pipeline suggests one, or add your own.
+              No maps yet. The monthly pipeline suggests one, or add your own.
             </div>
           )}
 

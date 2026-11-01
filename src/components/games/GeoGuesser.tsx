@@ -122,7 +122,11 @@ const GeoGuesser = ({ data, gameId }: { data: GeoGuesserData; gameId: string }) 
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-6 md:gap-8">
       <div ref={mapRef} className="relative z-0 w-full aspect-[16/10] border border-ink bg-paper-2 cursor-crosshair" />
       <div>
-        <SectionLabel className="mb-3">GeoGuesser</SectionLabel>
+        <SectionLabel className="mb-3">Where on Earth?</SectionLabel>
+        <h3 className="font-display font-semibold text-xl sm:text-[22px] leading-[1.25]">Find yourself.</h3>
+        <p className="font-sans text-[15px] leading-[1.5] text-ink-3 mt-1.5 mb-3">
+          A place. No name. Use the clue, the terrain and whatever else the map is willing to tell you. Then drop your pin.
+        </p>
         <p className="font-serif text-base leading-[1.55] text-ink-2 mb-2">{data.hint}</p>
         {data.region && <div className="font-sans text-sm text-meta mb-4">Region: {data.region}</div>}
         {!revealed ? (
@@ -141,8 +145,13 @@ const GeoGuesser = ({ data, gameId }: { data: GeoGuesserData; gameId: string }) 
           </div>
         ) : (
           <div className="border-t-2 border-ink bg-paper-2 px-4 pt-3.5 pb-4" aria-live="polite">
-            <div className="font-display font-bold text-[19px] leading-[1.25]">{score}: {distance?.toLocaleString()} km away</div>
-            <p className="font-sans text-[15px] sm:text-sm text-ink-3 mt-1">The answer was <b className="text-ink">{answerName}</b>.</p>
+            {distance !== null && distance < 500 ? (
+              <div className="font-display font-bold text-[19px] leading-[1.25]">Correct. <span className="font-normal">You may know where you are.</span></div>
+            ) : (
+              <div className="font-display font-bold text-[19px] leading-[1.25]">Not quite. <span className="font-normal">Geographical confidence: high. Geographical accuracy: under review.</span></div>
+            )}
+            <p className="font-sans text-[15px] sm:text-sm text-ink-3 mt-1">{score}: {distance?.toLocaleString()} km away. The answer was <b className="text-ink">{answerName}</b>.</p>
+            <p className="font-sans text-[13.5px] text-meta mt-1">How everyone else did appears next month.</p>
           </div>
         )}
       </div>

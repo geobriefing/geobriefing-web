@@ -36,6 +36,7 @@ const GISCrossword = ({ data, gameId }: { data: CrosswordData; gameId: string })
   )
   const [revealed, setRevealed] = useState(false)
   const [checked, setChecked] = useState(false)
+  const [complete, setComplete] = useState(false)
   const [correct, setCorrect] = useState<boolean[][]>(
     Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(false))
   )
@@ -88,6 +89,11 @@ const GISCrossword = ({ data, gameId }: { data: CrosswordData; gameId: string })
     })
     setCorrect(newCorrect)
     setChecked(true)
+    setComplete(clues.every(clue => !clue.answer || [...clue.answer].every((ch, i) => {
+      const r = clue.direction === "ACROSS" ? clue.row : clue.row + i
+      const c = clue.direction === "ACROSS" ? clue.col + i : clue.col
+      return grid[r]?.[c] === ch
+    })))
     // Count the play anonymously (the server keeps the first attempt per visitor per day).
     const cells: Record<string, string> = {}
     grid.forEach((row, r) => row.forEach((v, c) => { if (v) cells[`${r}-${c}`] = v }))
@@ -120,7 +126,11 @@ const GISCrossword = ({ data, gameId }: { data: CrosswordData; gameId: string })
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)] gap-6 lg:gap-9">
       <div>
-        <SectionLabel className="mb-3.5">GIS Crossword</SectionLabel>
+        <SectionLabel className="mb-3">The Grid</SectionLabel>
+        <h3 className="font-display font-semibold text-xl sm:text-[22px] leading-[1.25]">The monthly geospatial crossword</h3>
+        <p className="font-sans text-[15px] leading-[1.5] text-ink-3 mt-1.5 mb-4 max-w-[420px]">
+          GIS. Geography. Cartography. Earth observation. Spatial terminology. Some clues are easy. We needed you to feel confident before the others.
+        </p>
         <div className="overflow-x-auto max-w-full">
           <div className="inline-grid border-2 border-ink" style={{ gridTemplateColumns: `repeat(${cols}, clamp(28px, 8.2vw, 38px))` }}>
             {Array(rows).fill(null).map((_, r) =>
@@ -171,6 +181,11 @@ const GISCrossword = ({ data, gameId }: { data: CrosswordData; gameId: string })
             Reveal
           </button>
         </div>
+        <p className="mt-3 font-sans text-[15px] sm:text-sm leading-[1.5] text-ink-3 max-w-[420px]" aria-live="polite">
+          {complete
+            ? <><b className="text-ink">Grid complete.</b> Your obscure geospatial knowledge has finally found its moment.</>
+            : "Full solution in the next issue."}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:pt-[26px]">

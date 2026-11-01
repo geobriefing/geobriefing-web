@@ -6,8 +6,6 @@ import { AdminLoading, AdminTitle, BigBtn, Btn, Notice, inputCls } from "@/compo
 import { supabase } from "@/lib/supabase"
 import { useAdminAuth } from "@/lib/useAdminAuth"
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-
 const Row = ({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) => (
   <div className="grid grid-cols-1 sm:grid-cols-[190px_minmax(0,1fr)] gap-x-4 gap-y-2 items-start py-3.5 border-b border-hair">
     <div className="sm:pt-2.5">
@@ -30,9 +28,9 @@ const SettingsAdminPage = () => {
   const [uploading, setUploading] = useState(false)
   const [editorName, setEditorName] = useState("")
   const [editorBio, setEditorBio] = useState("")
+  const [editorShortBio, setEditorShortBio] = useState("")
   const [editorMission, setEditorMission] = useState("")
   const [editorContact, setEditorContact] = useState("")
-  const [publishDay, setPublishDay] = useState("Sunday")
   const [publishTime, setPublishTime] = useState("15:00")
   const [timezone, setTimezone] = useState("Asia/Karachi")
   const [fromAddress, setFromAddress] = useState("")
@@ -51,11 +49,10 @@ const SettingsAdminPage = () => {
       data.forEach((row: { id: string; value: string }) => { s[row.id] = row.value })
       setEditorName(s["editor_name"] || "")
       setEditorBio(s["editor_bio"] || "")
+      setEditorShortBio(s["editor_short_bio"] || "")
       setEditorMission(s["editor_mission"] || "")
       setEditorContact(s["editor_contact"] || "")
       setCurrentPhoto(s["editor_photo_url"] || "")
-      const day = (s["publish_day"] || "sunday").toLowerCase()
-      setPublishDay(day.charAt(0).toUpperCase() + day.slice(1))
       setPublishTime(s["publish_time"] || "15:00")
       setTimezone(s["timezone"] || "Asia/Karachi")
       setFromAddress(s["from_address"] || "GeoBriefing <onboarding@resend.dev>")
@@ -108,9 +105,9 @@ const SettingsAdminPage = () => {
       const results = await Promise.all([
         supabase.from("site_settings").upsert({ id: "editor_name", value: editorName }),
         supabase.from("site_settings").upsert({ id: "editor_bio", value: editorBio }),
+        supabase.from("site_settings").upsert({ id: "editor_short_bio", value: editorShortBio }),
         supabase.from("site_settings").upsert({ id: "editor_mission", value: editorMission }),
         supabase.from("site_settings").upsert({ id: "editor_contact", value: editorContact }),
-        supabase.from("site_settings").upsert({ id: "publish_day", value: publishDay.toLowerCase() }),
         supabase.from("site_settings").upsert({ id: "publish_time", value: publishTime }),
         supabase.from("site_settings").upsert({ id: "timezone", value: timezone }),
         supabase.from("site_settings").upsert({ id: "from_address", value: fromAddress }),
@@ -141,18 +138,16 @@ const SettingsAdminPage = () => {
           <Notice message={message} />
 
           <GroupLabel>Publishing</GroupLabel>
-          <Row label="Publish day" hint={`Used in every "Every ${publishDay}" line`}>
-            <select value={publishDay} onChange={e => setPublishDay(e.target.value)} className={inputCls}>
-              {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
+          <Row label="Frequency" hint="Fixed">
+            <div className="font-sans text-base sm:text-sm text-ink py-2">Monthly · Published on the 1st</div>
           </Row>
-          <Row label="Publish time" hint={`In ${timezone}`}>
+          <Row label="Publish time" hint={`On the 1st of every month, in ${timezone}`}>
             <input type="time" value={publishTime} onChange={e => setPublishTime(e.target.value)} className={inputCls} />
           </Row>
           <Row label="Timezone" hint="IANA name, e.g. Asia/Karachi">
             <input type="text" value={timezone} onChange={e => setTimezone(e.target.value)} className={inputCls} />
           </Row>
-          <Row label="From address" hint="Sender for the newsletter. Needs a domain verified in Resend.">
+          <Row label="From address" hint={'Sender name and address, e.g. "Aneeqa · GeoBriefing <hello@your-domain>". The address needs a domain verified in Resend.'}>
             <input type="text" value={fromAddress} onChange={e => setFromAddress(e.target.value)} className={inputCls} />
           </Row>
 
@@ -178,7 +173,11 @@ const SettingsAdminPage = () => {
               </div>
             </div>
           </Row>
-          <Row label="Bio" hint="About page, two or three sentences">
+          <Row label="Short bio" hint="One line, under &quot;Edited by&quot; on the subscribe page">
+            <input type="text" value={editorShortBio} onChange={e => setEditorShortBio(e.target.value)}
+              placeholder="GIS developer and researcher working across…" className={inputCls} />
+          </Row>
+          <Row label="Bio" hint="The editor section of the About page">
             <textarea value={editorBio} onChange={e => setEditorBio(e.target.value)} rows={4}
               placeholder="Your GIS background, where you are based, what you do…" className={`${inputCls} resize-y`} />
           </Row>

@@ -26,8 +26,18 @@ const plexMono = IBM_Plex_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'GeoBriefing — Spatial Intelligence · Weekly',
-  description: 'A free weekly briefing for the global geospatial community, with a focus on South Asia, the Middle East and Central Asia.',
+  title: 'GeoBriefing — Spatial Intelligence Monthly',
+  description: 'An independent monthly publication covering GIS, maps, Earth observation, GeoAI, spatial data and the geography behind the stories shaping our world.',
+  openGraph: {
+    title: 'GeoBriefing | Read the World Spatially',
+    description: 'Maps, GIS, Earth observation, GeoAI, data, global stories and one Country Desk every month.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'GeoBriefing | Read the World Spatially',
+    description: 'Maps, GIS, Earth observation, GeoAI, data, global stories and one Country Desk every month.',
+  },
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',

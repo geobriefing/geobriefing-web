@@ -28,22 +28,26 @@ export const Meta = ({ children, className = "" }: { children: React.ReactNode; 
 
 export const SectionRule = () => <div className="h-0.5 bg-ink" />
 
-/** Issue page section head: 2px rule, mono number and serif title. */
+/** Issue page section head: 2px rule, mono number, serif title and a one-line subtitle. */
 export const IssueSection = ({
-  id, n, title, aside, children, className = "",
+  id, n, title, subtitle, aside, children, className = "",
 }: {
   id: string
   n: number
   title: string
+  subtitle?: string
   aside?: React.ReactNode
   children: React.ReactNode
   className?: string
 }) => (
   <section id={id} className={`border-t-2 border-ink pt-3 sm:pt-4 pb-8 sm:pb-12 scroll-mt-4 ${className}`}>
     <div className="flex flex-wrap justify-between items-baseline gap-x-4 gap-y-1 mb-5 sm:mb-7">
-      <div className="flex items-baseline gap-2.5 sm:gap-3">
-        <span className="font-mono font-semibold text-[12px] sm:text-xs text-accent">{pad2(n)}</span>
-        <h2 className="font-display font-bold text-2xl sm:text-[32px] leading-[1.1]">{title}</h2>
+      <div>
+        <div className="flex items-baseline gap-2.5 sm:gap-3">
+          <span className="font-mono font-semibold text-[12px] sm:text-xs text-accent">{pad2(n)}</span>
+          <h2 className="font-display font-bold text-2xl sm:text-[32px] leading-[1.1]">{title}</h2>
+        </div>
+        {subtitle && <p className="mt-1.5 font-serif italic text-[16px] sm:text-[17px] leading-[1.45] text-ink-3">{subtitle}</p>}
       </div>
       {aside && <Meta>{aside}</Meta>}
     </div>
@@ -61,7 +65,8 @@ export const EditorNote = ({
   size?: "md" | "lg"
 }) => (
   <div className={`border-l-[3px] border-accent bg-accent-tint ${size === "lg" ? "px-4 py-4 sm:px-6 sm:py-5" : "px-4 py-4 sm:px-[22px] sm:py-[18px]"}`}>
-    <Label className="block mb-2.5">From the editor</Label>
+    <Label className="block">Editor&apos;s desk</Label>
+    <div className="font-serif italic text-[15px] text-ink-3 mt-0.5 mb-2.5">A note before we begin.</div>
     <p className={`font-serif text-ink-2 text-pretty ${size === "lg" ? "text-[17px] sm:text-[19px] leading-[1.65]" : "text-[16.5px] sm:text-[17px] leading-[1.6]"}`}>
       {note}
     </p>
@@ -97,7 +102,7 @@ export const QuoteCallout = ({
     </p>
     {author && (
       <div className="font-sans font-semibold text-label tracking-nav uppercase text-meta mt-2.5">
-        Quote of the week · {sourceUrl
+        {sourceUrl
           ? <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="hover:text-accent">{author}{role ? `, ${role}` : ""} ↗</a>
           : <>{author}{role ? `, ${role}` : ""}</>}
       </div>
@@ -142,6 +147,27 @@ export const FactBox = ({
       </div>
     )}
   </div>
+)
+
+/**
+ * A small interruption between the issue's big sections (the quote, the fact, the
+ * joke): no number, no rule, just a label, a one-line aside and the item itself.
+ */
+export const Interlude = ({
+  label, aside, children, className = "",
+}: {
+  label: string
+  aside?: string
+  children: React.ReactNode
+  className?: string
+}) => (
+  <aside className={`max-w-[620px] mx-auto pt-2 pb-10 sm:pb-12 ${className}`}>
+    <div className="flex items-baseline gap-2.5 mb-3">
+      <Label>{label}</Label>
+      {aside && <span className="font-serif italic text-[15px] text-ink-3">{aside}</span>}
+    </div>
+    {children}
+  </aside>
 )
 
 /** Ink-filled primary button (link). */

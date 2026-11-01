@@ -42,3 +42,13 @@ export const nextPublishSlot = (from: Date, s: Pick<SiteSettings, "publishTime" 
     ? zonedTimeToUtc(p.y + 1, 1, 1, hh, mm, s.timezone)
     : zonedTimeToUtc(p.y, p.m + 1, 1, hh, mm, s.timezone)
 }
+
+/** When the next issue comes out, for copy: "December" and "1 December 2026". */
+export const nextIssueDate = (s: Pick<SiteSettings, "publishTime" | "timezone">, from = new Date()) => {
+  const slot = nextPublishSlot(from, s)
+  const fmt = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { ...o, timeZone: s.timezone }).format(slot)
+  return { slot, month: fmt({ month: "long" }), date: fmt({ day: "numeric", month: "long", year: "numeric" }) }
+}
+
+/** "№01" */
+export const issueNo = (n: number) => `№${String(n).padStart(2, "0")}`

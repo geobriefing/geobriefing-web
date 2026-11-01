@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireEditor } from "@/lib/adminAuth"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { getSettings } from "@/lib/settings"
-import { gamesTeaserFrom, getLastWeekAnswers } from "@/lib/issue"
+import { gamesTeaserFrom, getLastIssueAnswers } from "@/lib/issue"
 import { nextPublishSlot } from "@/lib/schedule"
 import { DESK_SECTIONS } from "@/lib/deskSections"
 import { issueEmailProgress, quotaLeft } from "@/lib/emailQueue"
@@ -40,7 +40,7 @@ export const GET = async (req: NextRequest) => {
 
   const [
     review, stories, desks, gisStories, maps, comics, games, events, datasets, quotes, jokes, facts, features,
-    settings, lastWeek, prevIssue,
+    settings, lastIssue, prevIssue,
   ] = await Promise.all([
     db.from("issue_section_review").select("*").eq("issue_id", issue.id),
     db.from("stories").select("*").eq("issue_id", issue.id)
@@ -58,7 +58,7 @@ export const GET = async (req: NextRequest) => {
     byIssue("fun_facts"),
     byIssue("features", "created_at"),
     getSettings(),
-    getLastWeekAnswers(issue.issue_number).catch(() => null),
+    getLastIssueAnswers(issue.issue_number).catch(() => null),
     db.from("issues").select("id, issue_number").eq("status", "published").lt("issue_number", issue.issue_number)
       .order("issue_number", { ascending: false }).limit(1).maybeSingle(),
   ])
@@ -76,7 +76,7 @@ export const GET = async (req: NextRequest) => {
 
   const gameRows = games.data || []
   const has = (t: string) => gameRows.some(g => g.game_type === t && g.status === "approved")
-  const teaser = gamesTeaserFrom(lastWeek, {
+  const teaser = gamesTeaserFrom(lastIssue, {
     satellite: has("satellite_spot") ? { id: "", game_type: "satellite_spot", data: {} } : null,
     geoguesser: has("geoguesser") ? { id: "", game_type: "geoguesser", data: {} } : null,
     crossword: has("crossword") ? { id: "", game_type: "crossword", data: {} } : null,
@@ -105,14 +105,13 @@ export const GET = async (req: NextRequest) => {
     hooks: {
       mustRead: mustRead ? { id: mustRead.id, title: mustRead.title } : null,
       gamesTeaser: teaser,
-      lastWeekPlays: lastWeek?.players ?? 0,
+      lastIssuePlays: lastIssue?.players ?? 0,
       replyPrompt: issue.reply_prompt || "",
       replyCount: replyCount || 0,
       lastIssueReplyCount: lastReplyCount || 0,
     },
     email,
     schedule: {
-      publishDay: settings.publishDay,
       publishTime: settings.publishTime,
       timezone: settings.timezone,
       nextSlot: nextPublishSlot(new Date(issue.scheduled_at || Date.now()), settings).toISOString(),

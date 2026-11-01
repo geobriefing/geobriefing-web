@@ -5,6 +5,7 @@ import { getIssue, type IssueData } from "@/lib/issue"
 import { renderIssueEmail } from "@/lib/emails/issue"
 import { welcomeEmail } from "@/lib/emails/welcome"
 import { siteUrl, unsubscribeUrl } from "@/lib/site"
+import { nextIssueDate } from "@/lib/schedule"
 
 /**
  * Every email goes through email_queue, so sending stays inside Resend's allowance
@@ -94,7 +95,7 @@ const message = (row: QueueRow, s: SiteSettings, issues: Map<string, IssueData>)
       ...base,
       ...welcomeEmail({
         siteUrl: siteUrl(), unsubscribeUrl: unsub, name: row.subscribers?.name || "",
-        publishDay: s.publishDay, publishTime: s.publishTime, editorName: s.editorName, contactEmail: s.editorContact,
+        nextIssueMonth: nextIssueDate(s).month, editorName: s.editorName, contactEmail: s.editorContact,
       }),
     }
   }

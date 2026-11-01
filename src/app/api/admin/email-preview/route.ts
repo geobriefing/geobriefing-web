@@ -4,7 +4,7 @@ import { getIssue } from "@/lib/issue"
 import { getSettings } from "@/lib/settings"
 import { renderIssueEmail } from "@/lib/emails/issue"
 
-/** The weekly email for ?slug= as it would be sent now, as HTML. */
+/** The monthly email for ?slug= as it would be sent now, as HTML. */
 export const GET = async (req: NextRequest) => {
   const auth = await requireEditor(req)
   if (auth.error) return auth.error

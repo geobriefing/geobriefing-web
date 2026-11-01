@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { EDITABLE, HAS_AI_DRAFT, SORTABLE } from "@/lib/deskSections"
 
 type Action =
-  | "approve" | "discard" | "restore" | "save" | "delete" | "create"
+  | "approve" | "approve_all" | "discard" | "restore" | "save" | "delete" | "create"
   | "reorder" | "set_lead" | "set_must_read" | "clear_must_read"
 
 interface Body {
@@ -66,6 +66,14 @@ export const POST = async (req: NextRequest) => {
       const patch: Record<string, unknown> = { status: "approved" }
       if (HAS_AI_DRAFT.has(table)) patch.ai_draft = false
       return done((await db.from(table).update(patch).eq("id", id)).error)
+    }
+    case "approve_all": {
+      // Every listed item still in draft, in one go (the desk sends the section's drafts).
+      if (!body.ids?.length) return NextResponse.json({ error: "ids are required" }, { status: 400 })
+      const patch: Record<string, unknown> = { status: "approved" }
+      if (HAS_AI_DRAFT.has(table)) patch.ai_draft = false
+      const { data, error } = await db.from(table).update(patch).in("id", body.ids).eq("status", "draft").select("id")
+      return done(error, { approved: data?.length ?? 0 })
     }
     case "discard":
       return done((await db.from(table).update({ status: "discarded" }).eq("id", id)).error)

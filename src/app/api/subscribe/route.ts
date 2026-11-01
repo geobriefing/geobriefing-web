@@ -53,6 +53,9 @@ export const POST = async (req: NextRequest) => {
       return NextResponse.json({ error: "too_fast" }, { status: 400 })
     }
 
+    // A first name is required: every email opens with it.
+    if (!name) return NextResponse.json({ error: "name_required" }, { status: 400 })
+
     if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
       return NextResponse.json({ error: "invalid_email" }, { status: 400 })
     }

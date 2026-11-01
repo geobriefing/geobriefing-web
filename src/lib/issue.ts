@@ -50,7 +50,7 @@ export interface CountryDesk {
 export interface Feature { id: string; title: string; type: string; author_name: string; body_markdown: string }
 export interface PublicGame { id: string; game_type: GameType; data: Record<string, unknown> }
 
-export interface LastWeekGame {
+export interface LastIssueGame {
   type: GameType
   label: string
   answer: string
@@ -59,21 +59,21 @@ export interface LastWeekGame {
   medianKm: number | null
   closestKm: number | null
 }
-export interface LastWeekAnswers {
+export interface LastIssueAnswers {
   issueNumber: number
   slug: string
   players: number
-  games: LastWeekGame[]
+  games: LastIssueGame[]
 }
 export interface GamesTeaser {
   lastAnswer: string | null
   pctCorrect: number | null
   plays: number
-  thisWeek: string
+  thisIssue: string
 }
 
 export type SectionId = "news" | "country" | "story" | "feature" | "maps" | "comics" | "games" | "events" | "data"
-export interface Section { id: SectionId; n: number; title: string; nav: string }
+export interface Section { id: SectionId; n: number; title: string; nav: string; subtitle: string }
 
 export interface IssueData {
   issue: IssueRow
@@ -92,27 +92,29 @@ export interface IssueData {
   datasets: Dataset[]
   jokes: Joke[]
   facts: Fact[]
-  lastWeek: LastWeekAnswers | null
+  lastIssue: LastIssueAnswers | null
   gamesTeaser: GamesTeaser | null
   sections: Section[]
 }
 
 const GAME_LABELS: Record<GameType, string> = {
   satellite_spot: "Satellite Spot",
-  geoguesser: "GeoGuesser",
-  crossword: "Crossword",
+  geoguesser: "Where on Earth?",
+  crossword: "The Grid",
 }
 
-const SECTION_TITLES: Record<SectionId, [string, string]> = {
-  news: ["GIS News Digest", "News"],
-  country: ["Country desk", "Country desk"],
-  story: ["GIS Story", "Story"],
-  feature: ["Feature", "Feature"],
-  maps: ["Maps Don't Lie", "Maps"],
-  comics: ["Comics", "Comics"],
-  games: ["Games", "Games"],
-  events: ["Upcoming events", "Events"],
-  data: ["Data drops", "Data drops"],
+// In reading order: catch up (news), explore (big story, country desk, GIS story),
+// use (map, data, calendar), play (cartoon, games). [title, nav label, subtitle]
+const SECTION_TITLES: Record<SectionId, [string, string, string]> = {
+  news: ["The Month in 60 Seconds", "60 seconds", "The stories that mattered this month."],
+  feature: ["The Big Story", "Big story", "One subject. Properly explored."],
+  country: ["Country Desk", "Country desk", "One country. From the inside."],
+  story: ["The GIS Story", "GIS story", "Everything happens somewhere."],
+  maps: ["Maps Don't Lie", "Map", "One map. One story. Look closely."],
+  data: ["Data Drops", "Data", "Datasets and resources worth keeping."],
+  events: ["On the Calendar", "Calendar", "What's happening, where and when."],
+  comics: ["The Cartoon", "Cartoon", "A brief interruption."],
+  games: ["Play", "Play", "Your turn."],
 }
 
 const median = (xs: number[]) => {
@@ -143,11 +145,11 @@ export const computeReadTime = (d: Pick<IssueData, "issue" | "stories" | "gisSto
   ])
 
 // ─────────────────────────────────────────
-// Last week's answers and the games teaser
+// The last issue's answers and the games teaser
 // ─────────────────────────────────────────
 
 /** Answers and play stats for the issue before `issueNumber`. Counts are computed, never stored. */
-export const getLastWeekAnswers = async (issueNumber: number): Promise<LastWeekAnswers | null> => {
+export const getLastIssueAnswers = async (issueNumber: number): Promise<LastIssueAnswers | null> => {
   const db = supabaseAdmin()
   const { data: prev } = await db.from("issues").select("id, issue_number, slug")
     .eq("status", "published").lt("issue_number", issueNumber)
@@ -162,7 +164,7 @@ export const getLastWeekAnswers = async (issueNumber: number): Promise<LastWeekA
   const plays = playRows || []
 
   const order: GameType[] = ["satellite_spot", "geoguesser", "crossword"]
-  const result: LastWeekGame[] = games
+  const result: LastIssueGame[] = games
     .sort((a, b) => order.indexOf(a.game_type) - order.indexOf(b.game_type))
     .map(g => {
       const mine = plays.filter(p => p.game_id === g.id)
@@ -191,16 +193,16 @@ export const getLastWeekAnswers = async (issueNumber: number): Promise<LastWeekA
   }
 }
 
-/** The games cell of the hooks strip: last week's Satellite Spot answer plus this week's puzzles. */
-export const gamesTeaserFrom = (lastWeek: LastWeekAnswers | null, games: IssueData["games"]): GamesTeaser | null => {
+/** The games cell of the hooks strip: the last issue's Satellite Spot answer plus this month's puzzles. */
+export const gamesTeaserFrom = (lastIssue: LastIssueAnswers | null, games: IssueData["games"]): GamesTeaser | null => {
   const count = [games.satellite, games.geoguesser, games.crossword].filter(Boolean).length
-  if (!count && !lastWeek) return null
-  const sat = lastWeek?.games.find(g => g.type === "satellite_spot") || lastWeek?.games[0] || null
+  if (!count && !lastIssue) return null
+  const sat = lastIssue?.games.find(g => g.type === "satellite_spot") || lastIssue?.games[0] || null
   return {
     lastAnswer: sat?.answer ?? null,
     pctCorrect: sat?.pctCorrect ?? null,
     plays: sat?.plays ?? 0,
-    thisWeek: count === 0 ? "" : count === 1 ? "A new puzzle this week." : `${count} new puzzles this week.`,
+    thisIssue: count === 0 ? "" : count === 1 ? "A new puzzle this month." : `${count} new puzzles this month.`,
   }
 }
 
@@ -229,7 +231,7 @@ export const getIssue = async (
 
   const [
     { data: stories }, { data: jokes }, { data: facts }, { data: quote }, { data: gisStory }, { data: map },
-    { data: comics }, { data: games }, { data: events }, { data: datasets }, { data: desk }, lastWeek, replyCount, { data: feature },
+    { data: comics }, { data: games }, { data: events }, { data: datasets }, { data: desk }, lastIssue, replyCount, { data: feature },
   ] = await Promise.all([
     db.from("stories").select("id,title,summary,region,topic,source_name,source_url,is_lead,sort_order")
       .eq("issue_id", id).eq("status", "approved")
@@ -248,7 +250,7 @@ export const getIssue = async (
     db.from("datasets").select("id,name,publisher,region,format,licence,resolution,url,link_status")
       .eq("issue_id", id).eq("status", "approved").order("sort_order").order("created_at"),
     db.from("country_desks").select("*").eq("issue_id", id).eq("status", "approved").maybeSingle(),
-    getLastWeekAnswers(issue.issue_number).catch(() => null),
+    getLastIssueAnswers(issue.issue_number).catch(() => null),
     supabaseAdmin().from("replies").select("id", { count: "exact", head: true }).eq("issue_id", id)
       .then(r => r.count || 0, () => 0),
     db.from("features").select("id,title,type,author_name,body_markdown").eq("issue_id", id).eq("status", "approved").limit(1).maybeSingle(),
@@ -280,8 +282,8 @@ export const getIssue = async (
     datasets: (datasets || []) as Dataset[],
     jokes: (jokes || []) as Joke[],
     facts: (facts || []) as Fact[],
-    lastWeek,
-    gamesTeaser: gamesTeaserFrom(lastWeek, gamesOut),
+    lastIssue,
+    gamesTeaser: gamesTeaserFrom(lastIssue, gamesOut),
     sections: [],
   }
   data.readTimeMinutes = issue.read_time_minutes || computeReadTime(data)
@@ -300,7 +302,7 @@ export const getIssue = async (
   // Empty sections are left out and the numbering closes up.
   data.sections = (Object.keys(SECTION_TITLES) as SectionId[])
     .filter(s => present[s])
-    .map((s, i) => ({ id: s, n: i + 1, title: SECTION_TITLES[s][0], nav: SECTION_TITLES[s][1] }))
+    .map((s, i) => ({ id: s, n: i + 1, title: SECTION_TITLES[s][0], nav: SECTION_TITLES[s][1], subtitle: SECTION_TITLES[s][2] }))
 
   return data
 }

@@ -28,7 +28,7 @@ export const stripQuotedReply = (text: string) => {
   return kept.join("\n").trim()
 }
 
-/** The first country name mentioned in a reply, as the reader's guess for next week's desk. */
+/** The first country name mentioned in a reply, as the reader's guess for next month's desk. */
 export const parseGuess = (body: string): string | null => {
   const text = ` ${body.slice(0, 600)} `
   for (const name of COUNTRY_NAMES) {

@@ -18,15 +18,15 @@ interface DeskData {
   sections: Record<DeskSection, Row[]>
   hooks: {
     mustRead: { id: string; title: string } | null
-    gamesTeaser: { lastAnswer: string | null; pctCorrect: number | null; plays: number; thisWeek: string } | null
-    lastWeekPlays: number
+    gamesTeaser: { lastAnswer: string | null; pctCorrect: number | null; plays: number; thisIssue: string } | null
+    lastIssuePlays: number
     replyPrompt: string
     replyCount: number
     lastIssueReplyCount: number
   }
   /** Present once the issue has been queued for subscribers. */
   email: { sent: number; queued: number; failed: number; skipped: number; quotaLeft: number } | null
-  schedule: { publishDay: string; publishTime: string; timezone: string; nextSlot: string }
+  schedule: { publishTime: string; timezone: string; nextSlot: string }
 }
 
 /** "Emailed 100 of 230 · 130 queued for tomorrow" */
@@ -152,7 +152,7 @@ const EditorsDeskPage = () => {
         {!issue && (
           <div className="mt-8 border border-dashed border-[#B9B8B0] bg-card px-6 py-12 text-center">
             <div className="font-display font-bold text-[22px]">No issues yet</div>
-            <p className="mt-2 font-sans text-[15px] text-ink-3">Run the weekly pipeline to create the first draft issue.</p>
+            <p className="mt-2 font-sans text-[15px] text-ink-3">Run the monthly pipeline to create the first draft issue.</p>
           </div>
         )}
 
@@ -226,8 +226,8 @@ const EditorsDeskPage = () => {
                 <div className="font-sans font-bold text-[11.5px] leading-none tracking-button uppercase text-accent">Games teaser</div>
                 <div className="font-sans text-[13.5px] leading-[1.45] text-ink-2 mt-1.5">
                   {desk.hooks.gamesTeaser?.lastAnswer
-                    ? <>Last week: <b>{desk.hooks.gamesTeaser.lastAnswer}</b>{desk.hooks.gamesTeaser.pctCorrect != null && ` · ${desk.hooks.gamesTeaser.pctCorrect}% of ${desk.hooks.gamesTeaser.plays}`}</>
-                    : "No answers from last week yet"}
+                    ? <>Last issue: <b>{desk.hooks.gamesTeaser.lastAnswer}</b>{desk.hooks.gamesTeaser.pctCorrect != null && ` · ${desk.hooks.gamesTeaser.pctCorrect}% of ${desk.hooks.gamesTeaser.plays}`}</>
+                    : "No answers from the last issue yet"}
                   <span className="text-meta"> · auto-filled from plays</span>
                 </div>
               </div>
@@ -237,7 +237,7 @@ const EditorsDeskPage = () => {
                   onBlur={() => replyPrompt !== (issue.reply_prompt || "") && issueAction("update", "Reply prompt saved.", { reply_prompt: replyPrompt })}
                   className={`${smallCls} mt-1.5 py-[7px]`} aria-label="Reply to play hint" />
                 <div className="font-sans text-xs text-meta mt-1">
-                  {desk.hooks.lastIssueReplyCount} {desk.hooks.lastIssueReplyCount === 1 ? "reply" : "replies"} to last week&apos;s guess
+                  {desk.hooks.lastIssueReplyCount} {desk.hooks.lastIssueReplyCount === 1 ? "reply" : "replies"} to the last issue&apos;s guess
                   {desk.hooks.replyCount ? ` · ${desk.hooks.replyCount} to this issue` : ""}
                 </div>
               </div>
@@ -283,7 +283,7 @@ const EditorsDeskPage = () => {
 
                 {rows.length === 0 && (
                   <div className="mt-3.5 border border-dashed border-[#B9B8B0] bg-card px-6 py-12 text-center">
-                    <div className="font-display font-bold text-[22px] leading-[1.2]">Nothing for {def.label} this week</div>
+                    <div className="font-display font-bold text-[22px] leading-[1.2]">Nothing for {def.label} this month</div>
                     <p className="mt-2 mb-[18px] mx-auto max-w-[420px] font-sans text-[15px] leading-[1.55] text-ink-3">
                       {active === "comics"
                         ? "No strips uploaded for this issue yet. Upload one from the Comics tab, or skip the section."
@@ -291,8 +291,20 @@ const EditorsDeskPage = () => {
                     </p>
                     <div className="flex flex-wrap justify-center gap-2.5">
                       {def.creatable && <Btn variant="primary" onClick={add}>+ Add item</Btn>}
-                      {def.skippable && !activeReview?.reviewed && <Btn onClick={() => section("skip")}>Skip this week</Btn>}
+                      {def.skippable && !activeReview?.reviewed && <Btn onClick={() => section("skip")}>Skip this month</Btn>}
                     </div>
+                  </div>
+                )}
+
+                {rows.filter(r => r.status === "draft").length > 1 && (
+                  <div className="flex flex-wrap items-center gap-3 mt-3.5">
+                    <Btn variant="approve" disabled={busy}
+                      onClick={() => item(def.table, "approve_all", undefined, { ids: rows.filter(r => r.status === "draft").map(r => r.id) })}>
+                      Approve all {rows.filter(r => r.status === "draft").length} drafts
+                    </Btn>
+                    <span className="font-sans text-[13px] text-meta">
+                      {active === "news" ? "Sorted best first. Discard the ones you don't want, then approve the rest." : "Then discard any you don't want."}
+                    </span>
                   </div>
                 )}
 
@@ -344,7 +356,7 @@ const EditorsDeskPage = () => {
                 {!activeReview?.skipped && !published && (
                   <div className="flex flex-wrap justify-between items-center gap-3 mt-5 pt-4 border-t border-hair">
                     {def.skippable && !activeReview?.reviewed
-                      ? <Btn variant="quiet" className="py-3 px-4" onClick={() => section("skip")}>Skip this week</Btn>
+                      ? <Btn variant="quiet" className="py-3 px-4" onClick={() => section("skip")}>Skip this month</Btn>
                       : <span />}
                     {activeReview?.reviewed ? (
                       <div className="flex items-center gap-3">
@@ -366,6 +378,17 @@ const EditorsDeskPage = () => {
 }
 
 /** Region, type and source details shown next to the AI-draft badge. */
+/** The AI's relevance score (0–1) as a percentage: green when sure, amber when borderline. */
+const Score = ({ value }: { value: number | null }) => {
+  if (value == null) return null
+  const pct = Math.round(value * 100)
+  const tone = pct >= 75 ? "bg-accent-tint text-accent border-accent" : pct >= 60 ? "bg-paper-2 text-ink-2 border-hair-2" : "bg-warn-tint text-warn border-warn"
+  return (
+    <span title="How relevant the AI judged this story for GIS professionals"
+      className={`font-sans font-bold text-[11.5px] leading-none px-1.5 py-1 border ${tone}`}>{pct}% relevant</span>
+  )
+}
+
 const ItemBadges = ({ section, row }: { section: DeskSection; row: Row }) => {
   const meta = (text: string) => <span className="font-sans font-medium text-xs text-meta">{text}</span>
   const source = (url: string | null, label: string) => url
@@ -373,7 +396,7 @@ const ItemBadges = ({ section, row }: { section: DeskSection; row: Row }) => {
     : <span className="font-sans font-bold text-[11.5px] tracking-meta uppercase text-danger">No source</span>
   switch (section) {
     case "news":
-      return <><RegionPill region={row.region} />{meta([row.source_name, row.topic, row.scraped_at ? `scraped ${formatDate(row.scraped_at, "dayMonth")}` : null].filter(Boolean).join(" · "))}</>
+      return <><Score value={row.relevance_score} /><RegionPill region={row.region} />{meta([row.source_name, row.topic, row.scraped_at ? `scraped ${formatDate(row.scraped_at, "dayMonth")}` : null].filter(Boolean).join(" · "))}</>
     case "country_desk":
       return <><RegionPill region={row.region} />{meta(`${(row.source_urls || []).length} sources · ${(row.source_languages || []).join(", ").toUpperCase() || "no languages"}${row.desk_number ? ` · desk ${row.desk_number}` : ""}`)}</>
     case "data_drops":
