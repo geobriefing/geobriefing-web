@@ -25,7 +25,7 @@ const PROBLEMS = (contactEmail: string): Record<string, Problem> => ({
 
 const FALLBACK: Problem = { title: "Something went wrong.", body: "Please try again in a moment." }
 
-/** `website` is the hidden honeypot; `t` is when the form appeared (bots submit instantly). */
+/** `website` is the hidden honeypot field's value; `t` is when the form appeared (bots submit instantly). */
 const subscribe = async (email: string, name: string, website: string, t: number): Promise<{ ok: boolean; error?: string }> => {
   if (!name) return { ok: false, error: "name_required" }
   if (!email || !email.includes("@") || !email.split("@")[1]?.includes(".")) return { ok: false, error: "invalid_email" }
@@ -84,8 +84,11 @@ const SubscribeForm = ({
 
   const loading = status === "loading"
   const honeypot = (
-    <input type="text" name="website" value={website} onChange={e => setWebsite(e.target.value)}
-      tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] w-px h-px opacity-0" />
+    // Named so browser autofill never recognises it (a field called "website" got autofilled,
+    // which made real readers look like bots).
+    <input type="text" name="gb_hp_x7" id="gb_hp_x7" value={website} onChange={e => setWebsite(e.target.value)}
+      tabIndex={-1} autoComplete="off" data-lpignore="true" data-1p-ignore aria-hidden="true"
+      className="absolute -left-[9999px] w-px h-px opacity-0" />
   )
   const problemText = (tone: string) => problem && (
     <div className={`font-sans text-[14px] leading-[1.5] ${tone}`} role="alert">
