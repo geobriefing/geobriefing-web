@@ -51,7 +51,7 @@ const SatelliteSpot = ({ data, gameId, publishDay }: { data: SatelliteSpotData; 
       <div className="aspect-square bg-paper-2 border border-hair overflow-hidden">
         {!data.image_url ? (
           <div className="w-full h-full hatch flex items-end p-3">
-            <span className="font-mono text-[11px] text-meta">Satellite image pending</span>
+            <span className="font-mono text-[12px] text-meta">Satellite image pending</span>
           </div>
         ) : data.use_embed ? (
           <iframe src={data.image_url} className="w-full h-full border-0" title="Satellite view" loading="lazy" />

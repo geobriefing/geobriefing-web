@@ -75,7 +75,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 
 export const StatusText = ({ status }: { status: string }) => {
   const s = STATUS[status] || { label: status, cls: "text-meta" }
-  return <span className={`font-sans font-bold text-[10.5px] leading-none tracking-meta uppercase ${s.cls}`}>{s.label}</span>
+  return <span className={`font-sans font-bold text-[11.5px] leading-none tracking-meta uppercase ${s.cls}`}>{s.label}</span>
 }
 
 /** Small outlined chip used for section status in the desk sidebar. */
@@ -86,11 +86,11 @@ export const Chip = ({ tone, children }: { tone: "review" | "reviewed" | "skippe
     skipped: "text-meta border-hair-2 bg-paper-2",
     empty: "text-danger border-[#E5B3A8] bg-danger-tint",
   }[tone]
-  return <span className={`font-sans font-semibold text-[10px] leading-none tracking-[.1em] uppercase px-1.5 py-1 border whitespace-nowrap ${cls}`}>{children}</span>
+  return <span className={`font-sans font-semibold text-[11.5px] leading-none tracking-[.1em] uppercase px-1.5 py-1 border whitespace-nowrap ${cls}`}>{children}</span>
 }
 
 export const AdminLoading = () => (
-  <div className="min-h-screen flex items-center justify-center">
+  <div className="min-h-dvh flex items-center justify-center">
     <span className="font-sans text-xs tracking-meta uppercase text-meta">Loading…</span>
   </div>
 )

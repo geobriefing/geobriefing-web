@@ -12,7 +12,7 @@ const IssuesPage = async () => {
   const issues = groups.flatMap(g => g.items)
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <Masthead active="all-issues" />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pb-10 sm:pb-14">

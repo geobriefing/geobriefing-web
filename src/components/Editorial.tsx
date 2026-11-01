@@ -42,7 +42,7 @@ export const IssueSection = ({
   <section id={id} className={`border-t-2 border-ink pt-3 sm:pt-4 pb-8 sm:pb-12 scroll-mt-4 ${className}`}>
     <div className="flex flex-wrap justify-between items-baseline gap-x-4 gap-y-1 mb-5 sm:mb-7">
       <div className="flex items-baseline gap-2.5 sm:gap-3">
-        <span className="font-mono font-semibold text-[11px] sm:text-xs text-accent">{pad2(n)}</span>
+        <span className="font-mono font-semibold text-[12px] sm:text-xs text-accent">{pad2(n)}</span>
         <h2 className="font-display font-bold text-2xl sm:text-[32px] leading-[1.1]">{title}</h2>
       </div>
       {aside && <Meta>{aside}</Meta>}
@@ -178,7 +178,7 @@ export const TextLink = ({
 /** Black month/day block used for events. */
 export const DateBlock = ({ mon, day, small = false }: { mon: string; day: string; small?: boolean }) => (
   <div className={`flex-none border border-ink text-center ${small ? "w-[52px]" : "w-[58px] sm:w-[62px]"}`}>
-    <div className="bg-ink text-paper font-sans font-bold text-[10px] leading-none tracking-button pt-[5px] pb-1">{mon}</div>
+    <div className="bg-ink text-paper font-sans font-bold text-[11.5px] leading-none tracking-button pt-[5px] pb-1">{mon}</div>
     <div className={`font-display font-bold leading-none pt-[7px] pb-2 ${small ? "text-[22px]" : "text-[26px]"}`}>{day}</div>
   </div>
 )
@@ -186,6 +186,6 @@ export const DateBlock = ({ mon, day, small = false }: { mon: string; day: strin
 /** Hatched placeholder for an image that has not been supplied yet. */
 export const ImagePlaceholder = ({ label, className = "" }: { label: string; className?: string }) => (
   <div className={`hatch border border-hair flex items-end p-2.5 ${className}`}>
-    <span className="font-mono text-[11px] text-meta">{label}</span>
+    <span className="font-mono text-[12px] text-meta">{label}</span>
   </div>
 )

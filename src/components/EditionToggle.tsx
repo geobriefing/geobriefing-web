@@ -23,6 +23,8 @@ const EditionToggle = () => {
     const next: Edition = currentEdition() === "night" ? "day" : "night"
     document.documentElement.dataset.edition = next
     try { localStorage.setItem("gb-edition", next) } catch {}
+    document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
+      .forEach(m => { m.content = next === "night" ? "#131412" : "#FAFAF7" })
     setEdition(next)
   }
 
@@ -30,9 +32,9 @@ const EditionToggle = () => {
     <button
       type="button"
       onClick={toggle}
-      className="min-h-11 sm:min-h-0 font-sans font-medium text-[10.5px] leading-[1.4] tracking-meta uppercase text-meta hover:text-accent cursor-pointer"
+      className="min-h-11 sm:min-h-0 font-sans font-medium text-[11.5px] leading-[1.4] tracking-meta uppercase text-meta hover:text-accent cursor-pointer"
     >
-      {edition === "night" ? "Day edition" : edition === "day" ? "Night edition" : "Edition"}
+      {edition === "night" ? "Switch to day edition" : edition === "day" ? "Switch to night edition" : "Day / night edition"}
     </button>
   )
 }

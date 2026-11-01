@@ -148,7 +148,7 @@ const MapsAdminPage = () => {
   const issueNumber = (id: string | null) => issues.find(i => i.id === id)?.issue_number
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <AdminHeader active="maps" onLogout={logout} />
 
       <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-12">

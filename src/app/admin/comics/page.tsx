@@ -109,7 +109,7 @@ const ComicsAdminPage = () => {
   if (!ready) return <AdminLoading />
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <AdminHeader active="comics" onLogout={logout} />
 
       <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-12">

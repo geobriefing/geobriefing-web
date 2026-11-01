@@ -56,6 +56,7 @@ const EditorsDeskPage = () => {
   const [issueId, setIssueId] = useState<string | null>(null)
   const [active, setActive] = useState<DeskSection>("news")
   const [edits, setEdits] = useState<Edits>({})
+  const [preview, setPreview] = useState<string | null>(null)
   const [replyPrompt, setReplyPrompt] = useState("")
   const [message, setMessage] = useState("")
   const [busy, setBusy] = useState(false)
@@ -143,8 +144,9 @@ const EditorsDeskPage = () => {
   const tz = desk.schedule.timezone
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <AdminHeader active="review" onLogout={logout} />
+      {preview !== null && <EmailPreview html={preview} onClose={() => setPreview(null)} />}
       <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-12">
 
         {!issue && (
@@ -184,16 +186,13 @@ const EditorsDeskPage = () => {
                 )}
                 <Btn disabled={busy} onClick={async () => {
                   try {
-                    const html = await adminFetch<string>(`/api/admin/email-preview?slug=${encodeURIComponent(issue.slug)}`)
-                    const w = window.open("", "_blank")
-                    w?.document.write(html)
-                    w?.document.close()
+                    setPreview(await adminFetch<string>(`/api/admin/email-preview?slug=${encodeURIComponent(issue.slug)}`))
                   } catch (e) { setMessage(`Error: ${(e as Error).message}`) }
                 }}>Preview email</Btn>
                 <Btn disabled={busy} onClick={() => issueAction("test_email", "Test email sent to your contact address.")}>Send test</Btn>
                 {!published && !scheduled && (
                   <button type="button" disabled={!allReviewed || busy}
-                    onClick={() => issueAction("schedule", `Scheduled for ${desk.schedule.publishDay} ${desk.schedule.publishTime}.`)}
+                    onClick={() => issueAction("schedule", `Scheduled for ${slotLabel(desk.schedule.nextSlot, tz)}.`)}
                     className={`min-h-11 sm:min-h-0 font-sans font-semibold text-xs leading-none tracking-button uppercase text-paper px-[18px] py-[13px] ${
                       allReviewed ? "bg-accent hover:bg-accent-deep cursor-pointer" : "bg-[#B9B8B0] cursor-not-allowed"}`}>
                     Schedule
@@ -217,14 +216,14 @@ const EditorsDeskPage = () => {
             {/* Hooks bar */}
             <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] border border-hair bg-card mt-4">
               <div className="px-4 py-3.5">
-                <div className="font-sans font-bold text-[10.5px] leading-none tracking-button uppercase text-accent">If you read one thing</div>
+                <div className="font-sans font-bold text-[11.5px] leading-none tracking-button uppercase text-accent">If you read one thing</div>
                 <div className="font-display font-semibold text-[15.5px] leading-[1.3] mt-1.5">{desk.hooks.mustRead?.title || "Not set"}</div>
                 <div className="font-sans text-xs text-meta mt-1">
                   {desk.hooks.mustRead ? "Change it with \"Set as must-read\" on any story" : "Until set, the lead story is used"}
                 </div>
               </div>
               <div className="px-4 py-3.5 border-t md:border-t-0 md:border-l border-hair">
-                <div className="font-sans font-bold text-[10.5px] leading-none tracking-button uppercase text-accent">Games teaser</div>
+                <div className="font-sans font-bold text-[11.5px] leading-none tracking-button uppercase text-accent">Games teaser</div>
                 <div className="font-sans text-[13.5px] leading-[1.45] text-ink-2 mt-1.5">
                   {desk.hooks.gamesTeaser?.lastAnswer
                     ? <>Last week: <b>{desk.hooks.gamesTeaser.lastAnswer}</b>{desk.hooks.gamesTeaser.pctCorrect != null && ` · ${desk.hooks.gamesTeaser.pctCorrect}% of ${desk.hooks.gamesTeaser.plays}`}</>
@@ -233,7 +232,7 @@ const EditorsDeskPage = () => {
                 </div>
               </div>
               <div className="px-4 py-3.5 border-t md:border-t-0 md:border-l border-hair">
-                <div className="font-sans font-bold text-[10.5px] leading-none tracking-button uppercase text-accent">Reply to play</div>
+                <div className="font-sans font-bold text-[11.5px] leading-none tracking-button uppercase text-accent">Reply to play</div>
                 <input value={replyPrompt} onChange={e => setReplyPrompt(e.target.value)} placeholder="Hint: home to the Fedchenko Glacier"
                   onBlur={() => replyPrompt !== (issue.reply_prompt || "") && issueAction("update", "Reply prompt saved.", { reply_prompt: replyPrompt })}
                   className={`${smallCls} mt-1.5 py-[7px]`} aria-label="Reply to play hint" />
@@ -308,9 +307,9 @@ const EditorsDeskPage = () => {
                     <div key={row.id} className={`bg-card border border-hair border-l-[3px] ${bar} mt-3.5 px-4 py-4 sm:px-[18px] ${row.status === "discarded" ? "opacity-55" : ""}`}>
                       <div className="flex flex-wrap justify-between gap-3 items-center mb-3">
                         <div className="flex flex-wrap gap-2 items-center">
-                          {ai && <span className="font-mono font-semibold text-[10px] leading-none tracking-[.04em] px-1.5 py-1 bg-ink text-paper">AI DRAFT</span>}
-                          {isMust && <span className="font-sans font-bold text-[10px] leading-none tracking-meta uppercase px-[7px] py-1 bg-ink text-paper">If you read one thing</span>}
-                          {isLead && <span className="font-sans font-bold text-[10px] leading-none tracking-meta uppercase px-[7px] py-1 bg-accent text-paper">★ Lead</span>}
+                          {ai && <span className="font-mono font-semibold text-[11.5px] leading-none tracking-[.04em] px-1.5 py-1 bg-ink text-paper">AI DRAFT</span>}
+                          {isMust && <span className="font-sans font-bold text-[11.5px] leading-none tracking-meta uppercase px-[7px] py-1 bg-ink text-paper">If you read one thing</span>}
+                          {isLead && <span className="font-sans font-bold text-[11.5px] leading-none tracking-meta uppercase px-[7px] py-1 bg-accent text-paper">★ Lead</span>}
                           <ItemBadges section={active} row={row} />
                         </div>
                         {row.status && <StatusText status={row.status} />}
@@ -371,7 +370,7 @@ const ItemBadges = ({ section, row }: { section: DeskSection; row: Row }) => {
   const meta = (text: string) => <span className="font-sans font-medium text-xs text-meta">{text}</span>
   const source = (url: string | null, label: string) => url
     ? <a href={url} target="_blank" rel="noopener noreferrer" className="font-sans font-medium text-xs text-accent hover:text-accent-deep">{label} ↗</a>
-    : <span className="font-sans font-bold text-[10.5px] tracking-meta uppercase text-danger">No source</span>
+    : <span className="font-sans font-bold text-[11.5px] tracking-meta uppercase text-danger">No source</span>
   switch (section) {
     case "news":
       return <><RegionPill region={row.region} />{meta([row.source_name, row.topic, row.scraped_at ? `scraped ${formatDate(row.scraped_at, "dayMonth")}` : null].filter(Boolean).join(" · "))}</>
@@ -379,7 +378,7 @@ const ItemBadges = ({ section, row }: { section: DeskSection; row: Row }) => {
       return <><RegionPill region={row.region} />{meta(`${(row.source_urls || []).length} sources · ${(row.source_languages || []).join(", ").toUpperCase() || "no languages"}${row.desk_number ? ` · desk ${row.desk_number}` : ""}`)}</>
     case "data_drops":
       return <><RegionPill region={row.region} />{row.link_status === "broken"
-        ? <span className="font-sans font-bold text-[10.5px] tracking-meta uppercase text-danger">Link broken</span>
+        ? <span className="font-sans font-bold text-[11.5px] tracking-meta uppercase text-danger">Link broken</span>
         : meta(row.checked_at ? `link ok · checked ${formatDate(row.checked_at, "dayMonth")}` : "link not checked yet")}</>
     case "gis_story":
       return <><TypePill kind="story" value={row.story_type} />{source(row.source_url, row.source_title ? `Wikipedia: ${row.source_title}` : "Source")}</>
@@ -389,7 +388,7 @@ const ItemBadges = ({ section, row }: { section: DeskSection; row: Row }) => {
     case "quote":
       return row.source_url
         ? source(row.source_url, "Verified on Wikiquote")
-        : <span className="font-sans font-bold text-[10.5px] tracking-meta uppercase text-danger">Not verified: check the quote before approving</span>
+        : <span className="font-sans font-bold text-[11.5px] tracking-meta uppercase text-danger">Not verified: check the quote before approving</span>
     case "events": return <><TypePill kind="event" value={row.event_type} />{meta([formatDate(row.start_date, "short"), row.location].filter(Boolean).join(" · "))}</>
     case "games": return meta("Check it on the live preview before approving.")
     default: return row.topic ? meta(row.topic) : null
@@ -542,6 +541,24 @@ const CountryDeskFields = ({ row, val, edit, input, area, select }: {
           </ul>
         </details>
       )}
+    </div>
+  )
+}
+
+/** The rendered email in a full-screen panel inside the desk (no popup window to block). */
+const EmailPreview = ({ html, onClose }: { html: string; onClose: () => void }) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Email preview" className="fixed inset-0 z-50 flex flex-col bg-paper-2">
+      <div className="flex items-center justify-between gap-4 px-4 sm:px-6 py-2.5 border-b border-hair bg-paper">
+        <span className="font-sans font-semibold text-[13px] text-ink">Email preview</span>
+        <Btn onClick={onClose}>Close</Btn>
+      </div>
+      <iframe title="Email preview" srcDoc={html} sandbox="allow-popups allow-popups-to-escape-sandbox" className="flex-1 w-full bg-white" />
     </div>
   )
 }

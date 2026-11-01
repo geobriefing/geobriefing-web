@@ -40,7 +40,7 @@ const SourcesPage = async () => {
   const suggestHref = settings.editorContact ? `mailto:${settings.editorContact}?subject=Source%20suggestion` : "/subscribe"
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <Masthead active="sources" />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pb-10 sm:pb-14">

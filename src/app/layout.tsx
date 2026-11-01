@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Source_Serif_4, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import './globals.css'
 
@@ -35,9 +35,19 @@ export const metadata: Metadata = {
   },
 }
 
-// Applies a stored day/night choice before first paint. With no stored choice,
-// the CSS follows prefers-color-scheme.
-const editionScript = `try{var e=localStorage.getItem('gb-edition');if(e==='day'||e==='night')document.documentElement.dataset.edition=e}catch(_){}`
+// The phone's status bar and browser chrome take the page's paper colour.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FAFAF7' },
+    { media: '(prefers-color-scheme: dark)', color: '#131412' },
+  ],
+}
+
+// Applies a stored day/night choice before first paint (and to the status bar
+// colour). With no stored choice, the CSS follows prefers-color-scheme.
+const editionScript = `try{var e=localStorage.getItem('gb-edition');if(e==='day'||e==='night'){document.documentElement.dataset.edition=e;document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('meta[name=theme-color]').forEach(function(m){m.content=e==='night'?'#131412':'#FAFAF7'})})}}catch(_){}`
 
 const RootLayout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -49,7 +59,7 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => {
       <head>
         <script dangerouslySetInnerHTML={{ __html: editionScript }} />
       </head>
-      <body className="bg-paper text-ink font-sans min-h-screen">
+      <body className="bg-paper text-ink font-sans min-h-dvh">
         {children}
       </body>
     </html>

@@ -25,7 +25,7 @@ const AdminHeader = ({ active, onLogout }: AdminHeaderProps) => (
     <div className="h-[3px] bg-ink" />
     <div className="flex flex-wrap items-center gap-x-6 pt-3 sm:py-3 border-b-2 border-ink">
       <Link href="/admin/review" className="text-ink hover:text-ink"><Wordmark size={24} /></Link>
-      <span className="ml-3 sm:ml-0 font-sans font-bold text-[10.5px] leading-none tracking-button uppercase text-danger border border-danger px-[7px] py-1">
+      <span className="ml-3 sm:ml-0 font-sans font-bold text-[11.5px] leading-none tracking-button uppercase text-danger border border-danger px-[7px] py-1">
         Admin
       </span>
       <nav className="w-full sm:w-auto sm:flex-1 flex items-center gap-5 sm:gap-6 mt-1 sm:mt-0 overflow-x-auto no-scrollbar">

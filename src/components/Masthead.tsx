@@ -32,10 +32,10 @@ const Masthead = async ({ active, maxWidth = "max-w-5xl" }: { active?: NavKey; m
       <div className="h-1 bg-ink" />
       <div className="h-px bg-ink mt-0.5 sm:mt-[3px]" />
 
-      <div className="flex justify-between items-center gap-4 py-[7px] sm:py-[9px] font-sans font-semibold text-[9.5px] sm:text-label leading-[1.2] tracking-nav sm:tracking-button uppercase">
+      <div className="flex justify-between items-center gap-4 py-[7px] sm:py-[9px] font-sans font-semibold text-[11px] sm:text-label leading-[1.2] tracking-nav sm:tracking-button uppercase">
         <span className="sm:hidden">{issueLineShort}</span>
         <span className="hidden sm:inline">{issueLine}</span>
-        <span className="text-meta font-medium normal-case tracking-[.04em] sm:tracking-[.06em] text-[10.5px] sm:text-xs">{siteHost()}</span>
+        <span className="text-meta font-medium normal-case tracking-[.04em] sm:tracking-[.06em] text-[11.5px] sm:text-xs">{siteHost()}</span>
       </div>
 
       <div className="border-y border-ink pt-3.5 pb-[11px] sm:pt-[22px] sm:pb-4 flex flex-col items-center">
@@ -43,19 +43,19 @@ const Masthead = async ({ active, maxWidth = "max-w-5xl" }: { active?: NavKey; m
           <span className="sm:hidden"><Wordmark size={38} /></span>
           <span className="hidden sm:inline"><Wordmark size={60} /></span>
         </Link>
-        <div className="w-[210px] sm:w-[330px] h-px bg-ink mt-[9px] sm:mt-3" />
-        <div className="font-sans font-semibold text-[7.5px] sm:text-[9.5px] leading-none tracking-[.34em] sm:tracking-[.42em] pl-[.34em] sm:pl-[.42em] uppercase mt-[7px] sm:mt-[9px]">
+        <div className="w-[240px] sm:w-[360px] h-px bg-ink mt-[9px] sm:mt-3" />
+        <div className="font-sans font-semibold text-[10px] sm:text-[11px] leading-none tracking-[.22em] sm:tracking-[.34em] pl-[.22em] sm:pl-[.34em] uppercase mt-[7px] sm:mt-[9px]">
           Spatial Intelligence · Weekly
         </div>
       </div>
 
-      <div className="flex justify-center sm:justify-between gap-4 py-[7px] sm:py-[9px] font-sans font-medium text-[9.5px] sm:text-label leading-[1.2] tracking-[.1em] sm:tracking-meta uppercase text-meta border-b border-hair">
+      <div className="flex justify-center sm:justify-between gap-4 py-[7px] sm:py-[9px] font-sans font-medium text-[11px] sm:text-label leading-[1.2] tracking-[.08em] sm:tracking-meta uppercase text-meta border-b border-hair">
         <span className="sm:hidden">S. Asia · Middle East · C. Asia · Global</span>
         <span className="hidden sm:inline">South Asia · Middle East · Central Asia · Global</span>
         <span className="hidden sm:inline">Free weekly · GIS intelligence</span>
       </div>
 
-      <nav className="flex sm:justify-center items-center gap-[22px] sm:gap-8 border-b-2 border-ink overflow-x-auto no-scrollbar">
+      <nav className="flex flex-wrap justify-center items-center gap-x-5 sm:gap-x-8 border-b-2 border-ink">
         {NAV_ITEMS.map(item => (
           <Link
             key={item.key}

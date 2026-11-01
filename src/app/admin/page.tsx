@@ -42,14 +42,14 @@ const AdminPage = () => {
   if (checkingSession) return <AdminLoading />
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10">
+    <div className="min-h-dvh flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-[520px] bg-paper px-6 py-8 sm:px-12 sm:pt-10 sm:pb-11">
         <div className="h-1 bg-ink" />
         <div className="h-px bg-ink mt-[3px]" />
         <div className="flex justify-center pt-6 pb-1.5">
           <Wordmark size={34} />
         </div>
-        <div className="text-center font-sans font-semibold text-[10.5px] tracking-label uppercase text-danger pb-6 border-b border-ink">
+        <div className="text-center font-sans font-semibold text-[11.5px] tracking-label uppercase text-danger pb-6 border-b border-ink">
           Private · Editors only
         </div>
         <form onSubmit={handleLogin} className="flex flex-col gap-3.5 pt-6">

@@ -10,7 +10,7 @@ const SubscribePage = async () => {
   const settings = await getSettings()
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <Masthead active="subscribe" />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 pb-12 sm:pb-[72px] flex justify-center">

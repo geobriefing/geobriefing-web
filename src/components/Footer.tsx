@@ -33,7 +33,7 @@ const Footer = async ({ maxWidth = "max-w-5xl" }: { maxWidth?: string }) => {
         <div className="flex flex-wrap gap-12">
           {COLUMNS.map(col => (
             <div key={col.title} className="flex flex-col sm:gap-[9px] text-[15px] sm:text-sm">
-              <span className="font-bold text-[10.5px] leading-none tracking-label uppercase text-accent mb-1">{col.title}</span>
+              <span className="font-bold text-[11.5px] leading-none tracking-label uppercase text-accent mb-1">{col.title}</span>
               {col.links.map(l => (
                 <Link key={l.href} href={l.href} className="flex items-center min-h-11 sm:min-h-0 text-ink hover:text-accent">{l.label}</Link>
               ))}
@@ -41,7 +41,7 @@ const Footer = async ({ maxWidth = "max-w-5xl" }: { maxWidth?: string }) => {
           ))}
         </div>
       </div>
-      <div className="border-t border-hair pt-3.5 flex flex-wrap justify-between items-center gap-2 font-medium text-[10.5px] leading-[1.4] tracking-meta uppercase text-meta">
+      <div className="border-t border-hair pt-3.5 flex flex-wrap justify-between items-center gap-2 font-medium text-[11.5px] leading-[1.4] tracking-meta uppercase text-meta">
         <span>© {year} GeoBriefing</span>
         <EditionToggle />
         <span>Spatial intelligence · Weekly</span>

@@ -1,7 +1,5 @@
 import type { SiteSettings } from "@/lib/settings"
 
-const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
-
 /** Minutes the timezone is ahead of UTC at a given instant, e.g. +300 for Asia/Karachi. */
 const offsetMinutes = (at: Date, timeZone: string) => {
   const name = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "longOffset" })
@@ -31,26 +29,16 @@ const localParts = (at: Date, timeZone: string) => {
 }
 
 /**
- * The first publish slot (publish day + time in the configured timezone) at or after `from`.
- * Changing Settings moves every future slot; nothing is stored.
+ * The next publish slot at or after `from`. GeoBriefing is monthly: it publishes on
+ * the 1st of every month at the publish time, in the configured timezone. Changing
+ * Settings moves every future slot; nothing is stored.
  */
-export const nextPublishSlot = (from: Date, s: Pick<SiteSettings, "publishDayKey" | "publishTime" | "timezone">): Date => {
+export const nextPublishSlot = (from: Date, s: Pick<SiteSettings, "publishTime" | "timezone">): Date => {
   const [hh, mm] = s.publishTime.split(":").map(Number)
-  for (let i = 0; i <= 7; i++) {
-    const day = new Date(from.getTime() + i * 86_400_000)
-    const p = localParts(day, s.timezone)
-    if (p.weekday !== s.publishDayKey) continue
-    const slot = zonedTimeToUtc(p.y, p.m, p.d, hh, mm, s.timezone)
-    if (slot.getTime() >= from.getTime()) return slot
-  }
-  // Same weekday but the time has passed: next week.
-  return nextPublishSlot(new Date(from.getTime() + 86_400_000), s)
-}
-
-/** Monday 00:00 to the publish slot, in the configured timezone: the week an issue covers. */
-export const weekCovered = (slot: Date, timeZone: string) => {
-  const p = localParts(slot, timeZone)
-  const back = (WEEKDAYS.indexOf(p.weekday) + 6) % 7
-  const monday = localParts(new Date(slot.getTime() - back * 86_400_000), timeZone)
-  return { start: zonedTimeToUtc(monday.y, monday.m, monday.d, 0, 0, timeZone), end: slot }
+  const p = localParts(from, s.timezone)
+  const thisMonth = zonedTimeToUtc(p.y, p.m, 1, hh, mm, s.timezone)
+  if (thisMonth.getTime() >= from.getTime()) return thisMonth
+  return p.m === 12
+    ? zonedTimeToUtc(p.y + 1, 1, 1, hh, mm, s.timezone)
+    : zonedTimeToUtc(p.y, p.m + 1, 1, hh, mm, s.timezone)
 }

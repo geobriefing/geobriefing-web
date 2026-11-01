@@ -3,7 +3,7 @@ import Footer from "@/components/Footer"
 import { Label, PrimaryLink } from "@/components/Editorial"
 
 const UnsubscribedPage = () => (
-  <div className="min-h-screen">
+  <div className="min-h-dvh">
     <Masthead />
     <main className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-20 text-center">
       <Label>Unsubscribed</Label>

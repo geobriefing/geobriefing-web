@@ -18,6 +18,11 @@ import SatelliteSpot from "@/components/games/SatelliteSpot"
 import GeoGuesser from "@/components/games/GeoGuesser"
 import GISCrossword from "@/components/games/GISCrossword"
 
+/** "example.org" for a link; the link itself if it isn't a valid URL (never throws). */
+const hostOf = (url: string) => {
+  try { return new URL(url).hostname.replace(/^www\./, "") } catch { return url }
+}
+
 const LANGS: Record<string, string> = { ur: "Urdu", fa: "Persian", ar: "Arabic", ru: "Russian", en: "English" }
 
 const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
@@ -43,13 +48,13 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
   const mapParas = paragraphs(map?.commentary)
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <Masthead active="all-issues" />
 
       <main className="max-w-[900px] mx-auto px-4 sm:px-6">
 
         <header className="pt-6 sm:pt-10 pb-7 sm:pb-9">
-          <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 font-sans font-medium text-[11px] sm:text-caption tracking-meta uppercase text-meta">
+          <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 font-sans font-medium text-[12px] sm:text-caption tracking-meta uppercase text-meta">
             <span>
               <Link href="/issues" className="text-accent font-semibold hover:text-accent-deep">All issues</Link> / Issue #{issue.issue_number}
             </span>
@@ -70,7 +75,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
           )}
 
           {d.sections.length > 1 && (
-            <nav className="flex sm:flex-wrap gap-x-5 gap-y-2 mt-5 sm:mt-7 sm:py-0 border-y border-hair sm:border-0 overflow-x-auto no-scrollbar whitespace-nowrap font-sans font-semibold text-[11px] sm:text-[11.5px] tracking-meta uppercase">
+            <nav className="flex sm:flex-wrap gap-x-5 gap-y-2 mt-5 sm:mt-7 sm:py-0 border-y border-hair sm:border-0 overflow-x-auto no-scrollbar whitespace-nowrap font-sans font-semibold text-[12px] sm:text-[11.5px] tracking-meta uppercase">
               <span className="text-meta hidden sm:inline-flex items-center">Jump to</span>
               {d.sections.map(s => (
                 <a key={s.id} href={`#${s.id}`} className="flex-none flex items-center min-h-11 sm:min-h-0 text-accent hover:text-accent-deep">{s.nav}</a>
@@ -89,7 +94,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
                     <article id={`story-${b.story.id}`} className="scroll-mt-4">
                       <div className="flex flex-wrap gap-2 items-center mb-2 sm:mb-[9px]">
                         <RegionPill region={b.story.region} />
-                        {b.story.topic && <span className="font-sans font-medium text-[10.5px] sm:text-[11px] tracking-meta uppercase text-meta">{b.story.topic}</span>}
+                        {b.story.topic && <span className="font-sans font-medium text-[11.5px] sm:text-[12px] tracking-meta uppercase text-meta">{b.story.topic}</span>}
                       </div>
                       <h3 className="font-display font-semibold text-lg sm:text-xl leading-[1.26] text-pretty">{b.story.title}</h3>
                       {b.story.summary && <p className="mt-2 font-serif text-digest text-ink-2 text-pretty">{b.story.summary}</p>}
@@ -144,7 +149,7 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
                     </summary>
                     <ol className="mt-2 flex flex-col gap-1 list-decimal pl-4 break-all">
                       {countryDesk.source_urls.map(u => (
-                        <li key={u}><a href={u} target="_blank" rel="noopener noreferrer" className="hover:text-accent">{new URL(u).hostname.replace(/^www\./, "")}</a></li>
+                        <li key={u}><a href={u} target="_blank" rel="noopener noreferrer" className="hover:text-accent">{hostOf(u)}</a></li>
                       ))}
                     </ol>
                   </details>
@@ -317,14 +322,14 @@ const IssuePage = async ({ params }: { params: Promise<{ slug: string }> }) => {
           <IssueSection id="data" n={sec("data")!.n} title={sec("data")!.title} aside={`${datasets.length} this week`}>
             <p className="-mt-3 mb-3 font-sans text-[15.5px] leading-[1.5] text-ink-3">New open datasets released this week. Each one is checked by hand.</p>
             {/* Table on tablet and up; one card per dataset on phones. */}
-            <div className="hidden sm:grid grid-cols-[minmax(0,2.2fr)_110px_120px_100px_90px] gap-4 py-2 border-b border-ink font-sans font-semibold text-[10.5px] tracking-nav uppercase text-meta">
+            <div className="hidden sm:grid grid-cols-[minmax(0,2.2fr)_110px_120px_100px_90px] gap-4 py-2 border-b border-ink font-sans font-semibold text-[11.5px] tracking-nav uppercase text-meta">
               <span>Dataset</span><span>Format</span><span>Licence</span><span>Resolution</span><span />
             </div>
             {datasets.map(x => (
               <div key={x.id} className="grid grid-cols-1 sm:grid-cols-[minmax(0,2.2fr)_110px_120px_100px_90px] gap-x-4 gap-y-2 sm:items-center py-3.5 border-b border-hair">
                 <div>
                   <div className="flex gap-2 items-center mb-1.5"><RegionPill region={x.region} />
-                    {x.link_status === "broken" && <span className="font-sans font-semibold text-[10.5px] tracking-meta uppercase text-danger">Link broken</span>}
+                    {x.link_status === "broken" && <span className="font-sans font-semibold text-[11.5px] tracking-meta uppercase text-danger">Link broken</span>}
                   </div>
                   <div className="font-display font-semibold text-[17.5px] leading-[1.3]">{x.name}</div>
                   {x.publisher && <div className="font-sans text-[15px] sm:text-[13.5px] text-ink-3 mt-0.5">{x.publisher}</div>}

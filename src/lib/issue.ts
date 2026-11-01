@@ -240,7 +240,9 @@ export const getIssue = async (
     db.from("gis_stories").select("id,title,content,story_type,source_title,source_url").eq("issue_id", id).eq("status", "approved").limit(1).maybeSingle(),
     db.from("maps_dont_lie").select("id,title,commentary,map_type,image_url,source_url,image_credit").eq("issue_id", id).eq("status", "approved").limit(1).maybeSingle(),
     db.from("comic_strips").select("id,title,image_url,comic_series(title)").eq("issue_id", id).eq("status", "approved").order("sort_order"),
-    db.from("games").select("*").eq("issue_id", id).eq("status", "approved"),
+    // Games hold their answers, so they're read server-side only (the public key has no
+    // access to them); publicGameData strips the answers before anything reaches a browser.
+    supabaseAdmin().from("games").select("*").eq("issue_id", id).eq("status", "approved"),
     db.from("events").select("id,name,organizer,location,start_date,end_date,event_type,is_free,is_online,url")
       .eq("is_active", true).eq("status", "approved").gte("start_date", since).order("start_date").limit(8),
     db.from("datasets").select("id,name,publisher,region,format,licence,resolution,url,link_status")

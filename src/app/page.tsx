@@ -37,7 +37,7 @@ const HomePage = async () => {
 
   if (!d) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-dvh">
         <Masthead active="this-week" />
         <main className="max-w-5xl mx-auto px-4 sm:px-6 py-16 text-center">
           <h1 className="font-display font-bold text-[30px] sm:text-display">The first issue is on its way</h1>
@@ -67,7 +67,7 @@ const HomePage = async () => {
   const nextEvent = events[0]
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <Masthead active="this-week" />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -101,7 +101,7 @@ const HomePage = async () => {
               {toc.map((t, i) => (
                 <Link key={t.anchor} href={`${href}#${t.anchor}`}
                   className="grid grid-cols-[24px_minmax(0,1fr)] gap-x-2 py-3 border-b border-hair text-ink hover:text-accent">
-                  <span className="font-mono text-[11px] leading-[1.9] text-accent">{pad2(i + 1)}</span>
+                  <span className="font-mono text-[12px] leading-[1.9] text-accent">{pad2(i + 1)}</span>
                   <span>
                     <span className="block font-display font-bold text-base sm:text-[17px] leading-[1.25]">{t.title}</span>
                     <span className="block font-sans text-[15px] sm:text-sm leading-[1.45] text-ink-3 mt-[3px]">{t.teaser}</span>
@@ -123,7 +123,7 @@ const HomePage = async () => {
                   <article className={rest.length > 0 ? "sm:pr-6 sm:border-r sm:border-hair" : ""}>
                     <div className="flex flex-wrap gap-2 items-center mb-2.5">
                       <RegionPill region={lead.region} />
-                      {lead.topic && <Meta className="text-[11px]">{lead.topic}</Meta>}
+                      {lead.topic && <Meta className="text-[12px]">{lead.topic}</Meta>}
                     </div>
                     <h2 className="font-display font-bold text-[22px] sm:text-[25px] leading-[1.18] tracking-[-0.005em] text-balance">
                       <Link href={`${href}#news`} className="text-ink hover:text-accent">{lead.title}</Link>
@@ -137,7 +137,7 @@ const HomePage = async () => {
                         <article key={s.id} className={`pb-4 mb-4 ${i < a.length - 1 ? "border-b border-hair" : ""} ${i === 0 ? "border-t border-hair pt-4 sm:border-t-0 sm:pt-0" : ""}`}>
                           <div className="flex flex-wrap gap-2 items-center mb-2">
                             <RegionPill region={s.region} />
-                            {s.topic && <Meta className="text-[11px]">{s.topic}</Meta>}
+                            {s.topic && <Meta className="text-[12px]">{s.topic}</Meta>}
                           </div>
                           <h3 className="font-display font-semibold text-lg sm:text-h3 leading-[1.28] text-pretty">
                             <Link href={`${href}#news`} className="text-ink hover:text-accent">{s.title}</Link>
@@ -188,7 +188,7 @@ const HomePage = async () => {
                 <div>
                   <div className="flex items-center gap-2.5">
                     <RegionPill region={countryDesk.region} />
-                    {countryDesk.desk_number && <span className="font-mono text-[11px] text-meta">Desk {pad2(countryDesk.desk_number)} of the series</span>}
+                    {countryDesk.desk_number && <span className="font-mono text-[12px] text-meta">Desk {pad2(countryDesk.desk_number)} of the series</span>}
                   </div>
                   <h2 className="mt-3 font-display font-bold text-[34px] sm:text-[44px] leading-none tracking-[-0.015em]">{countryDesk.country}</h2>
                   <p className="mt-3 mb-4 font-serif text-[17px] leading-[1.6] text-ink-2 text-pretty line-clamp-4">{countryDesk.intro}</p>
@@ -265,7 +265,7 @@ const HomePage = async () => {
                             <span className="block font-display font-semibold text-[15px] leading-[1.3]">{x.name}</span>
                             {x.publisher && <span className="block font-sans text-[13px] leading-[1.4] text-meta">{x.publisher}</span>}
                           </span>
-                          <span className="flex-none self-start font-mono font-medium text-[10.5px] leading-none px-1.5 py-1 text-ink bg-paper-2 border border-hair">{x.format}</span>
+                          <span className="flex-none self-start font-mono font-medium text-[11.5px] leading-none px-1.5 py-1 text-ink bg-paper-2 border border-hair">{x.format}</span>
                         </Link>
                       ))}
                       <TextLink href={`${href}#data`} className="mt-3">
@@ -290,7 +290,7 @@ const HomePage = async () => {
               {past.map(p => (
                 <Link key={p.id} href={`/issues/${p.slug}`}
                   className="grid grid-cols-1 sm:grid-cols-[64px_minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 items-baseline py-3 sm:py-3.5 border-b border-hair text-ink hover:text-accent">
-                  <span className="font-mono text-[11px] sm:text-[13px] text-meta">
+                  <span className="font-mono text-[12px] sm:text-[13px] text-meta">
                     #{p.issue_number}<span className="sm:hidden"> · {formatDate(p.published_at, "short")}</span>
                   </span>
                   <span className="font-display font-semibold text-[16.5px] sm:text-h3 leading-[1.3]">{p.headline}</span>
